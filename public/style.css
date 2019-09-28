@@ -18,3 +18,10 @@ canvas {
     margin: auto;
     display: block;
 }
+
+#tools {
+    width: 512px;
+
+    margin: auto;
+    display: block;
+}

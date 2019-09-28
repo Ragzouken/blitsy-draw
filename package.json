@@ -2,10 +2,13 @@
   "name": "blitsy-draw",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
+    "@types/file-saver": "^2.0.1",
     "@types/jest": "24.0.18",
     "@types/node": "12.7.8",
-    "blitsy": "latest",
+    "blitsy": "^0.1.3",
+    "file-saver": "^2.0.2",
     "react-scripts": "3.1.2",
     "typescript": "3.6.3"
   },
