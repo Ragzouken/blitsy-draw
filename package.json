@@ -16,7 +16,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "publish": "npm run build && butler push ./build candle/blitsy-draw:web"
   },
   "eslintConfig": {
     "extends": "react-app"

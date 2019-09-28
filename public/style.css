@@ -8,6 +8,10 @@ html, body {
 }
 
 canvas {
+    image-rendering: pixelated;
+}
+
+#display {
     width: 512px;
     height: 512px;
     image-rendering: pixelated;
@@ -24,4 +28,9 @@ canvas {
 
     margin: auto;
     display: block;
+}
+
+.brush {
+    width: 16px;
+    height: 16px;
 }

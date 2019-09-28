@@ -1,62 +1,36 @@
-import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture } from 'blitsy';
+import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, spriteToCanvas, imageToContext } from 'blitsy';
 import FileSaver from 'file-saver';
+import { bresenham, drawLine, fillColor } from './draw';
 
-const brushTest = `
-X_X_X
-_X_X_
-X_X_X
-_X_X_
-X_X_X
-`;
-
-const brushTest2 = `
+const brushData = [
+`
+X
+`,
+`
+XX
+XX
+`,
+`
+_X_
+XXX
+_X_
+`,
+`
+_XX_
+XXXX
+XXXX
+_XX_
+`,
+`
 _XXX_
 XXXXX
 XXXXX
 XXXXX
 _XXX_
-`;
+`
+];
 
-function bresenham(x0: number, y0: number, x1: number, y1: number, 
-                   callback: (x: number, y: number) => void)
-{
-    const steep = Math.abs(y1 - y0) > Math.abs(x1 - x0);
-
-    if (steep) {
-        [x0, y0] = [y0, x0];
-        [x1, y1] = [y1, x1];
-    }    
-
-    const reverse = x0 > x1;
-
-    if (reverse) {
-        [x0, x1] = [x1, x0];
-        [y0, y1] = [y1, y0];
-    }
-
-    const dx = (x1 - x0);
-    const dy = Math.abs(y1 - y0);
-
-    const ystep = (y0 < y1 ? 1 : -1);
-
-    let err = Math.floor(dx / 2);
-    let y = y0;
-
-    for (let x = x0; x <= x1; ++x) {
-        if (steep) {
-            callback(y, x);
-        } else {
-            callback(x, y);
-        }
-
-        err -= dy;
-
-        if (err < 0) {
-            y += ystep;
-            err += dx;
-        }
-    }
-}
+const brushes = brushData.map(data => canvasToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
 document.addEventListener("keydown", event => HELD_KEYS.add(event.key));
@@ -71,17 +45,18 @@ export class BlitsyDraw
     public readonly drawingContext: Context2D;
 
     private readonly cursor = { x: 0, y: 0 };
-    private brush: Sprite;
+    public brush: Sprite;
     private stroke: Stroke | undefined = undefined;
 
     constructor()
     {
         this.displayContext = createContext2D(256, 256);
         this.displayCanvas = this.displayContext.canvas;
+        this.displayCanvas.id = "display";
         document.getElementById("root")!.appendChild(this.displayContext.canvas);
         this.drawingContext = createContext2D(256, 256);
 
-        this.brush = canvasToSprite(decodeAsciiTexture(brushTest, "X").canvas);
+        this.brush = brushes[2];
     }
 
     public start(): void
@@ -98,53 +73,9 @@ export class BlitsyDraw
             this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) / 2);
             this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) / 2);
         };
-        
-        const withPixels = (action: (pixels: Uint32Array) => void) => {
-            const image = this.drawingContext.getImageData(0, 0, 256, 256);
-            action(new Uint32Array(image.data.buffer));
-            this.drawingContext.putImageData(image, 0, 0);
-        };
 
-        const drawLine = (x0: number, y0: number, x1: number, y1: number) => {
-            bresenham(x0, y0, x1, y1, (x, y) => drawSprite(this.drawingContext, this.brush, x - 3, y - 3));
-        };
-
-        const drawFill = (x: number, y: number) => {
-            withPixels(pixels => {
-                const queue = [{x, y}];
-                const done = new Set<string>();
-                const str = (x: number, y: number) => `${x},${y}`;
-                const get = (x: number, y: number) => pixels[y * 256 + x];
-                const set = (x: number, y: number, value: number) => pixels[y * 256 + x] = value;
-
-                const initial = get(x, y);
-                const white = 0xFFFFFFFF;
-
-                function valid(x: number, y: number) {
-                    const within = x >= 0 && y >= 0 && x < 256 && y < 256;
-
-                    return within 
-                        && get(x, y) === initial 
-                        && !done.has(str(x, y));
-                }
-
-                function enqueue(x: number, y: number) {
-                    if (valid(x, y)) {
-                        queue.push({x, y});
-                    }
-                }
-
-                while (queue.length > 0) {
-                    const coord = queue.pop()!;
-                    set(coord.x, coord.y, white);
-                    done.add(str(coord.x, coord.y));
-
-                    enqueue(coord.x - 1, coord.y);
-                    enqueue(coord.x + 1, coord.y);
-                    enqueue(coord.x, coord.y - 1);
-                    enqueue(coord.x, coord.y + 1);
-                }
-            });
+        const drawLine2 = (x0: number, y0: number, x1: number, y1: number) => {
+            drawLine(this.drawingContext, this.brush, x0 - 3, y0 - 3, x1 - 3, y1 - 3);
         };
 
         const beginStroke = (type: "draw" | "line") => {
@@ -155,7 +86,7 @@ export class BlitsyDraw
 
         window.addEventListener("keydown", event => {
             if (event.key === "Enter") {
-                drawFill(this.cursor.x, this.cursor.y);
+                fillColor(this.drawingContext, 0xFFFFFFFF, this.cursor.x, this.cursor.y);
             }
         });
 
@@ -172,10 +103,10 @@ export class BlitsyDraw
         window.addEventListener("pointerup", event => {
             setCursor(event);
             if (this.stroke && this.stroke.type === "draw") {
-                drawLine(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);
+                drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);
                 this.stroke = undefined;
             } else if (this.stroke && this.stroke.type === "line") {
-                drawLine(this.stroke.startX, this.stroke.startY, this.cursor.x, this.cursor.y);
+                drawLine2(this.stroke.startX, this.stroke.startY, this.cursor.x, this.cursor.y);
                 this.stroke = undefined;
             } else if (HELD_KEYS.has('Shift')) {
                 beginStroke("line");
@@ -185,7 +116,7 @@ export class BlitsyDraw
             setCursor(event);
             
             if (this.stroke && this.stroke.type === "draw") {
-                drawLine(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);                
+                drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);                
             }
 
             if (this.stroke) {
@@ -217,6 +148,10 @@ export class BlitsyDraw
     }
 }
 
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }  
+
 async function start()
 {
     const app = new BlitsyDraw();
@@ -227,6 +162,36 @@ async function start()
         const json = JSON.stringify(encodeTexture(app.drawingContext, 'RGBA8'));
         const blob = new Blob([json], {type: "text/plain;charset=utf-8"});
         FileSaver.saveAs(blob, "drawing.blitsy.json");
+    });
+
+    const brushContainer = document.getElementById("brushes")!;
+    brushes.forEach(sprite => {
+        const context = createContext2D(8, 8);
+        drawSprite(context, sprite, 
+                   4 - Math.floor(sprite.rect.w / 2), 
+                   4 - Math.floor(sprite.rect.h / 2));
+        const canvas = context.canvas as HTMLCanvasElement;
+        canvas.className = "brush";
+        brushContainer.appendChild(canvas);
+        canvas.addEventListener("click", () => {
+            app.brush = sprite;
+        });
+    });
+    
+    const encodeInput = document.getElementById("encode-image")! as HTMLInputElement;
+    const encodeImage = document.createElement("img");
+    encodeInput.addEventListener("change", event => {
+        const files = (event as any).target.files;
+        if (!files || !files.length) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+            encodeImage.src = reader.result as string;
+            encodeImage.addEventListener("load", () => {
+                const data = encodeTexture(imageToContext(encodeImage), 'RGBA8');
+                console.log(JSON.stringify(data));
+            });
+        }
+        reader.readAsDataURL(files[0]);
     });
 }
 
