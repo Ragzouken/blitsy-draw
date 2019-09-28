@@ -1,5 +1,10 @@
-body {
+html, body {
     background-color: black;
+}
+
+#root {
+    margin-left: auto;
+    margin-right: auto;
 }
 
 canvas {
@@ -7,4 +12,9 @@ canvas {
     height: 512px;
     image-rendering: pixelated;
     cursor: none;
+    border: solid white;
+    border-width: 2px;
+
+    margin: auto;
+    display: block;
 }
