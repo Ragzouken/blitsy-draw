@@ -193,11 +193,12 @@ export class BlitsyDraw
 
     constructor()
     {
-        this.displayContext = createContext2D(256, 256);
+        const [width, height] = [128, 128];
+        this.displayContext = createContext2D(width, height);
         this.displayCanvas = this.displayContext.canvas;
         this.displayCanvas.id = "display";
         document.getElementById("root")!.appendChild(this.displayContext.canvas);
-        this.drawingContext = createContext2D(256, 256);
+        this.drawingContext = createContext2D(width, height);
 
         this.activeBrush = brushes[2];
         this.brushColored = recolor(this.activeBrush, this.activeColor);
@@ -229,7 +230,7 @@ export class BlitsyDraw
 
     public render(): void
     {
-        this.displayContext.clearRect(0, 0, 256, 256);
+        this.displayContext.clearRect(0, 0, this.displayContext.canvas.width, this.displayContext.canvas.height);
         this.displayContext.drawImage(this.drawingContext.canvas, 0, 0);
 
         const tool = this.tools[this.activeTool];
@@ -260,8 +261,10 @@ export class BlitsyDraw
 
     private updateCursorFromEvent(event: PointerEvent): void
     {
-        this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) / 2);
-        this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) / 2);
+        const canvas = this.displayContext.canvas as HTMLCanvasElement;
+        const [sx, sy] = [canvas.width / canvas.scrollWidth, canvas.height / canvas.scrollHeight]
+        this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) * sx);
+        this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) * sy);
     }
 
     private updateBrush(): void
