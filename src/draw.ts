@@ -1,5 +1,4 @@
-import { Context2D, Sprite, drawSprite, createContext2D, canvasToSprite } from "blitsy";
-import { colorToHex } from "./color";
+import { Context2D, Sprite, drawSprite, createContext2D, canvasToSprite, colorToHex } from "blitsy";
 
 export function recolor(sprite: Sprite, color: number): Sprite {
     const [width, height] = [sprite.rect.w, sprite.rect.h];
@@ -30,36 +29,27 @@ export function fillColor(context: Context2D,
                           x: number, y: number) {
     const [width, height] = [context.canvas.width, context.canvas.height];
     withPixels(context, pixels => {
-        const queue = [{x, y}];
-        const done = new Set<number>();
-        const get = (x: number, y: number) => pixels[y * width + x];
-        const set = (x: number, y: number, value: number) => pixels[y * width + x] = value;
-
-        const initial = get(x, y);
-
-        function valid(x: number, y: number) {
-            const within = x >= 0 && y >= 0 && x < width && y < height;
-
-            return within 
-                && get(x, y) === initial 
-                && !done.has(y * width + x);
-        }
+        const queue = [[x, y]];
+        const done = new Array(width * height);
+        const initial = pixels[y * width + x];
 
         function enqueue(x: number, y: number) {
-            if (valid(x, y)) {
-                queue.push({x, y});
+            const within = x >= 0 && y >= 0 && x < width && y < height;
+
+            if (within && pixels[y * width + x] === initial && !done[y * width + x]) {
+                queue.push([x, y]);
             }
         }
 
         while (queue.length > 0) {
-            const coord = queue.pop()!;
-            set(coord.x, coord.y, color);
-            done.add(coord.y * width + coord.x);
+            const [x, y] = queue.pop()!;
+            pixels[y * width + x] = color;
+            done[y * width + x] = true;
 
-            enqueue(coord.x - 1, coord.y);
-            enqueue(coord.x + 1, coord.y);
-            enqueue(coord.x, coord.y - 1);
-            enqueue(coord.x, coord.y + 1);
+            enqueue(x - 1, y);
+            enqueue(x + 1, y);
+            enqueue(x, y - 1);
+            enqueue(x, y + 1);
         }
     });
 };

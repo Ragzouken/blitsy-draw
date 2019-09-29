@@ -1,7 +1,6 @@
-import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, imageToContext } from 'blitsy';
+import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, imageToContext, rgbaToColor, colorToHex, Vector2, makeVector2 } from 'blitsy';
 import FileSaver from 'file-saver';
 import { bresenham, drawLine, fillColor, recolor } from './draw';
-import { rgbaToColor, colorToHex } from './color';
 
 const drawIcon = decodeAsciiTexture(`
 ________
@@ -79,11 +78,102 @@ const HELD_KEYS = new Set<string>();
 document.addEventListener("keydown", event => HELD_KEYS.add(event.key));
 document.addEventListener("keyup", event => HELD_KEYS.delete(event.key));
 
-type Tool = "draw" | "line" | "fill";
-type Stroke = {startX: number, startY: number, lastX: number, lastY: number, type: "draw" | "line"};
+type ToolType = "draw" | "line" | "fill";
 
 function guessPivot(sprite: Sprite): [number, number] {
     return [Math.ceil(sprite.rect.w / 2), Math.ceil(sprite.rect.h / 2)];
+}
+
+export class Tool
+{
+    constructor(protected readonly app: BlitsyDraw) { }
+
+    public cursor = "none";
+    public drawCursor(context: Context2D, pointer: Vector2): void { };
+    public start(pointer: Vector2): void { };
+    public move(pointer: Vector2): void { };
+    public stop(pointer: Vector2): void { };
+}
+
+export class DrawTool extends Tool
+{
+    private lastPos: Vector2 | undefined = undefined;
+
+    drawCursor(context: Context2D, pointer: Vector2): void
+    {
+        const brush = this.app.brushColored;
+        const [ox, oy] = guessPivot(brush);
+        drawSprite(context, this.app.brushColored, pointer.x - ox, pointer.y - oy);
+    }
+
+    start(pointer: Vector2): void
+    {
+        const brush = this.app.brushColored;
+        const [ox, oy] = guessPivot(brush);
+        drawSprite(this.app.drawingContext, brush, pointer.x - ox, pointer.y - oy);
+        this.lastPos = makeVector2(pointer.x, pointer.y);
+    }
+
+    move(pointer: Vector2): void
+    {
+        if (!this.lastPos) return;
+        const brush = this.app.brushColored;
+        const [ox, oy] = guessPivot(brush);
+        const [x0, y0] = [this.lastPos.x, this.lastPos.y];
+        const [x1, y1] = [pointer.x, pointer.y];
+        drawLine(this.app.drawingContext, brush, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
+        this.lastPos = makeVector2(pointer.x, pointer.y);
+    }
+
+    stop(pointer: Vector2): void
+    {
+        this.lastPos = undefined;
+    }
+}
+
+export class LineTool extends Tool
+{
+    private startPos: Vector2 | undefined = undefined;
+
+    drawCursor(context: Context2D, pointer: Vector2): void
+    {
+        const brush = this.app.brushColored;
+        const [ox, oy] = guessPivot(brush);
+        const [px, py] = [pointer.x, pointer.y];
+
+        if (this.startPos) {
+            const [sx, sy] = [this.startPos.x, this.startPos.y];
+            drawLine(context, brush, sx - ox, sy - oy, px - ox, py - oy);
+        } else {
+            drawSprite(context, this.app.brushColored, px - ox, py - oy);
+        }
+    }
+
+    start(pointer: Vector2): void
+    {
+        this.startPos = makeVector2(pointer.x, pointer.y);
+    }
+
+    stop(pointer: Vector2): void
+    {
+        if (!this.startPos) return;
+        const brush = this.app.brushColored;
+        const [ox, oy] = guessPivot(brush);
+        const [x0, y0] = [this.startPos.x, this.startPos.y];
+        const [x1, y1] = [pointer.x, pointer.y];
+        drawLine(this.app.drawingContext, brush, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
+        this.startPos = undefined;
+    }
+}
+
+export class FillTool extends Tool 
+{
+    public cursor = "crosshair";
+
+    start(pointer: Vector2): void
+    {
+        fillColor(this.app.drawingContext, this.app.activeColor, pointer.x, pointer.y);
+    }
 }
 
 export class BlitsyDraw
@@ -92,13 +182,14 @@ export class BlitsyDraw
     private readonly displayContext: Context2D;
     public readonly drawingContext: Context2D;
 
-    public activeTool: Tool = "draw";
+    public activeTool: ToolType = "draw";
+    public activeBrush: Sprite;
     public activeColor = 0xFFFFFFFF;
-    private readonly cursor = { x: 0, y: 0 };
-    public brush: Sprite;
-    private stroke: Stroke | undefined = undefined;
 
-    private brushColored: Sprite;
+    private readonly cursor: Vector2 = { x: 0, y: 0 };
+    public brushColored: Sprite;
+
+    private tools: {[tool: string]: Tool} = {};
 
     constructor()
     {
@@ -108,8 +199,12 @@ export class BlitsyDraw
         document.getElementById("root")!.appendChild(this.displayContext.canvas);
         this.drawingContext = createContext2D(256, 256);
 
-        this.brush = brushes[2];
-        this.brushColored = recolor(this.brush, this.activeColor);
+        this.activeBrush = brushes[2];
+        this.brushColored = recolor(this.activeBrush, this.activeColor);
+
+        this.tools["draw"] = new DrawTool(this);
+        this.tools["line"] = new LineTool(this);
+        this.tools["fill"] = new FillTool(this);
     }
 
     public start(): void
@@ -122,62 +217,9 @@ export class BlitsyDraw
 
         window.requestAnimationFrame(animate);
 
-        const setCursor = (event: PointerEvent) => {
-            this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) / 2);
-            this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) / 2);
-        };
-
-        const drawLine2 = (x0: number, y0: number, x1: number, y1: number) => {
-            const [ox, oy] = guessPivot(this.brush);
-            drawLine(this.drawingContext, this.brushColored, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
-        };
-
-        const beginStroke = (type: "draw" | "line") => {
-            this.stroke = { startX: this.cursor.x, startY: this.cursor.y,
-                            lastX: this.cursor.x, lastY: this.cursor.y, type };
-            return this.stroke;
-        };
-
-        window.addEventListener("pointerdown", event => {
-            setCursor(event);
-            this.brushColored = recolor(this.brush, this.activeColor);
-
-            if (this.activeTool === "fill") {
-                fillColor(this.drawingContext, this.activeColor, this.cursor.x, this.cursor.y);
-            } else if (HELD_KEYS.has('Shift') || this.activeTool === "line") {
-                beginStroke("line");
-            } else {
-                const [ox, oy] = guessPivot(this.brush);
-                const stroke = beginStroke("draw");
-                drawSprite(this.drawingContext, this.brush, stroke.lastX - ox, stroke.lastY - oy);
-            }
-        });
-        window.addEventListener("pointerup", event => {
-            setCursor(event);
-            this.brushColored = recolor(this.brush, this.activeColor);
-            if (this.stroke && this.stroke.type === "draw") {
-                drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);
-                this.stroke = undefined;
-            } else if (this.stroke && this.stroke.type === "line") {
-                drawLine2(this.stroke.startX, this.stroke.startY, this.cursor.x, this.cursor.y);
-                this.stroke = undefined;
-            } else if (HELD_KEYS.has('Shift') || this.activeTool === "line") {
-                beginStroke("line");
-            } 
-        });
-        window.addEventListener("pointermove", event => {
-            setCursor(event);
-            this.brushColored = recolor(this.brush, this.activeColor);
-            
-            if (this.stroke && this.stroke.type === "draw") {
-                drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);                
-            }
-
-            if (this.stroke) {
-                this.stroke.lastX = this.cursor.x;
-                this.stroke.lastY = this.cursor.y;
-            }
-        });
+        window.addEventListener("pointerdown", event => this.onPointerDown(event));
+        window.addEventListener("pointerup", event => this.onPointerUp(event));
+        window.addEventListener("pointermove", event => this.onPointerMove(event));
     }
 
     public update(dt: number): void
@@ -190,17 +232,49 @@ export class BlitsyDraw
         this.displayContext.clearRect(0, 0, 256, 256);
         this.displayContext.drawImage(this.drawingContext.canvas, 0, 0);
 
-        const [ox, oy] = guessPivot(this.brush);
-        if (this.stroke && this.stroke.type === "line") {
-            bresenham(this.stroke.startX, 
-                      this.stroke.startY, 
-                      this.stroke.lastX, 
-                      this.stroke.lastY, (x, y) => drawSprite(this.displayContext, this.brushColored, x - ox, y - oy));
-        } else {
-            drawSprite(this.displayContext, this.brushColored, 
-                       this.cursor.x - ox, this.cursor.y - oy);
-        }
+        const tool = this.tools[this.activeTool];
+        this.displayCanvas.setAttribute("style", `cursor: ${tool.cursor}`);
+        tool.drawCursor(this.displayContext, this.cursor);
     }
+
+    private onPointerDown(event: PointerEvent): void
+    {
+        this.updateCursorFromEvent(event);
+        this.updateBrush();
+        this.tools[this.activeTool].start(this.cursor);
+    }
+
+    private onPointerUp(event: PointerEvent): void
+    {
+        this.updateCursorFromEvent(event);
+        this.updateBrush();
+        this.tools[this.activeTool].stop(this.cursor);
+    }
+
+    private onPointerMove(event: PointerEvent): void 
+    {
+        this.updateCursorFromEvent(event);
+        this.updateBrush();
+        this.tools[this.activeTool].move(this.cursor);               
+    }
+
+    private updateCursorFromEvent(event: PointerEvent): void
+    {
+        this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) / 2);
+        this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) / 2);
+    }
+
+    private updateBrush(): void
+    {
+        this.brushColored = recolor(this.activeBrush, this.activeColor);
+    }
+}
+
+function downloadContextAsTexture(context: Context2D, format='RGBA8', name = "drawing"): void {
+    const data = encodeTexture(context, format);
+    const json = JSON.stringify(data);
+    const blob = new Blob([json], {type: "text/plain;charset=utf-8"});
+    FileSaver.saveAs(blob, "drawing.blitsy.json");
 }
 
 async function start()
@@ -209,11 +283,7 @@ async function start()
     app.start();
 
     const button = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
-    button.addEventListener("click", () => {
-        const json = JSON.stringify(encodeTexture(app.drawingContext, 'RGBA8'));
-        const blob = new Blob([json], {type: "text/plain;charset=utf-8"});
-        FileSaver.saveAs(blob, "drawing.blitsy.json");
-    });
+    button.addEventListener("click", () => downloadContextAsTexture(app.drawingContext));
 
     const brushContainer = document.getElementById("brushes")!;
     brushes.forEach(sprite => {
@@ -225,7 +295,10 @@ async function start()
         canvas.className = "brush";
         brushContainer.appendChild(canvas);
         canvas.addEventListener("click", () => {
-            app.brush = sprite;
+            if (app.activeTool === "fill") {
+                app.activeTool = "draw";
+            }
+            app.activeBrush = sprite;
         });
     });
 
@@ -248,22 +321,6 @@ async function start()
         button.addEventListener("click", () => {
             app.activeColor = color;
         });
-    });
-
-    const encodeInput = document.getElementById("encode-image")! as HTMLInputElement;
-    const encodeImage = document.createElement("img");
-    encodeInput.addEventListener("change", event => {
-        const files = (event as any).target.files;
-        if (!files || !files.length) return;
-        const reader = new FileReader();
-        reader.onload = function () {
-            encodeImage.src = reader.result as string;
-            encodeImage.addEventListener("load", () => {
-                const data = encodeTexture(imageToContext(encodeImage), 'RGBA8');
-                console.log(JSON.stringify(data));
-            });
-        }
-        reader.readAsDataURL(files[0]);
     });
 }
 
