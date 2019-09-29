@@ -1,7 +1,9 @@
 export type RGBA = {r: number, g: number, b: number, a: number};
 
 export function colorToHex(color: number): string {
-    return (color | 0xFF000000).toString(16).slice(1);
+    color = (color | 0xFF000000) >>> 0;
+    const abgrHex = color.toString(16);
+    return abgrHex.substr(6, 2) + abgrHex.substr(4, 2) + abgrHex.substr(2, 2);
 }
 
 export function rgbaToColor(rgba: RGBA): number {
