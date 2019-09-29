@@ -1,4 +1,15 @@
-import { Context2D, Sprite, drawSprite } from "blitsy";
+import { Context2D, Sprite, drawSprite, createContext2D, spriteToCanvas, canvasToSprite } from "blitsy";
+import { num2hex } from ".";
+
+export function recolor(sprite: Sprite, color: number): Sprite {
+    const [width, height] = [sprite.rect.w, sprite.rect.h];
+    const context = createContext2D(width, height);
+    context.fillStyle = num2hex(color);
+    context.fillRect(0, 0, width, height);
+    context.globalCompositeOperation = "destination-in";
+    drawSprite(context, sprite, 0, 0);
+    return canvasToSprite(context.canvas);
+};
 
 export function withPixels(context: Context2D, 
                            action: (pixels: Uint32Array) => void) {
@@ -17,21 +28,21 @@ export function drawLine(context: Context2D,
 export function fillColor(context: Context2D, 
                           color: number, 
                           x: number, y: number) {
+    const [width, height] = [context.canvas.width, context.canvas.height];
     withPixels(context, pixels => {
         const queue = [{x, y}];
-        const done = new Set<string>();
-        const str = (x: number, y: number) => `${x},${y}`;
-        const get = (x: number, y: number) => pixels[y * 256 + x];
-        const set = (x: number, y: number, value: number) => pixels[y * 256 + x] = value;
+        const done = new Set<number>();
+        const get = (x: number, y: number) => pixels[y * width + x];
+        const set = (x: number, y: number, value: number) => pixels[y * width + x] = value;
 
         const initial = get(x, y);
 
         function valid(x: number, y: number) {
-            const within = x >= 0 && y >= 0 && x < 256 && y < 256;
+            const within = x >= 0 && y >= 0 && x < width && y < height;
 
             return within 
                 && get(x, y) === initial 
-                && !done.has(str(x, y));
+                && !done.has(y * width + x);
         }
 
         function enqueue(x: number, y: number) {
@@ -43,7 +54,7 @@ export function fillColor(context: Context2D,
         while (queue.length > 0) {
             const coord = queue.pop()!;
             set(coord.x, coord.y, color);
-            done.add(str(coord.x, coord.y));
+            done.add(coord.y * width + coord.x);
 
             enqueue(coord.x - 1, coord.y);
             enqueue(coord.x + 1, coord.y);

@@ -1,6 +1,39 @@
-import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, spriteToCanvas, imageToContext } from 'blitsy';
+import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, imageToContext } from 'blitsy';
 import FileSaver from 'file-saver';
-import { bresenham, drawLine, fillColor } from './draw';
+import { bresenham, drawLine, fillColor, recolor } from './draw';
+
+const drawIcon = decodeAsciiTexture(`
+________
+_____X__
+____X_X_
+___X_X__
+__XXX___
+_X_X____
+_XX_____
+________
+`, 'X');
+
+const lineIcon = decodeAsciiTexture(`
+________
+______X_
+_____XX_
+____XX__
+___XX___
+__XX____
+_XX_____
+________
+`, 'X');
+
+const fillIcon = decodeAsciiTexture(`
+________
+_X_____X
+_X____X_
+_X__XXX_
+_XXX__X_
+_X____X_
+__XXXX__
+________
+`, 'X');
 
 const brushData = [
 `
@@ -30,13 +63,79 @@ _XXX_
 `
 ];
 
+function randomInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+export function num2hex(value: number): string
+{
+    return rgb2hex(num2rgb(value));
+}
+
+export function rgb2num(r: number, g: number, b: number, a: number = 255)
+{
+    return ((a << 24) | (b << 16) | (g << 8) | (r)) >>> 0;
+}
+
+export function num2rgb(value: number): [number, number, number]
+{
+    const r = (value >>  0) & 0xFF;
+    const g = (value >>  8) & 0xFF;
+    const b = (value >> 16) & 0xFF;
+    
+    return [r, g, b];
+}
+
+export function rgb2hex(color: [number, number, number]): string
+{
+    const [r, g, b] = color;
+    let rs = r.toString(16);
+    let gs = g.toString(16);
+    let bs = b.toString(16);
+
+    if (rs.length < 2) { rs = "0" + rs; }
+    if (gs.length < 2) { gs = "0" + gs; }
+    if (bs.length < 2) { bs = "0" + bs; }
+
+    return `#${rs}${gs}${bs}`;
+}
+
+export function hex2rgb(color: string,
+                        fallback = [255, 0, 255]): number[]
+{
+    const matches = color.match(/^#([0-9a-f]{6})$/i);
+
+    if (matches) 
+    {
+        const match = matches[1];
+
+        return [
+            parseInt(match.substr(0,2),16),
+            parseInt(match.substr(2,2),16),
+            parseInt(match.substr(4,2),16)
+        ];
+    }
+    
+    return fallback;
+}
+
+function randomColor() {
+    return rgb2num(randomInt(0, 255), randomInt(0, 255), randomInt(0, 255));
+}
+
+const colors = Array.from({ length: 16 }).map(i => randomColor());
 const brushes = brushData.map(data => canvasToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
 document.addEventListener("keydown", event => HELD_KEYS.add(event.key));
 document.addEventListener("keyup", event => HELD_KEYS.delete(event.key));
 
+type Tool = "draw" | "line" | "fill";
 type Stroke = {startX: number, startY: number, lastX: number, lastY: number, type: "draw" | "line"};
+
+function guessPivot(sprite: Sprite): [number, number] {
+    return [Math.ceil(sprite.rect.w / 2), Math.ceil(sprite.rect.h / 2)];
+}
 
 export class BlitsyDraw
 {
@@ -44,9 +143,13 @@ export class BlitsyDraw
     private readonly displayContext: Context2D;
     public readonly drawingContext: Context2D;
 
+    public activeTool: Tool = "draw";
+    public activeColor = 0xFFFFFFFF;
     private readonly cursor = { x: 0, y: 0 };
     public brush: Sprite;
     private stroke: Stroke | undefined = undefined;
+
+    private brushColored: Sprite;
 
     constructor()
     {
@@ -57,6 +160,7 @@ export class BlitsyDraw
         this.drawingContext = createContext2D(256, 256);
 
         this.brush = brushes[2];
+        this.brushColored = recolor(this.brush, this.activeColor);
     }
 
     public start(): void
@@ -68,14 +172,15 @@ export class BlitsyDraw
         };
 
         window.requestAnimationFrame(animate);
-        
+
         const setCursor = (event: PointerEvent) => {
             this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) / 2);
             this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) / 2);
         };
 
         const drawLine2 = (x0: number, y0: number, x1: number, y1: number) => {
-            drawLine(this.drawingContext, this.brush, x0 - 3, y0 - 3, x1 - 3, y1 - 3);
+            const [ox, oy] = guessPivot(this.brush);
+            drawLine(this.drawingContext, this.brushColored, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
         };
 
         const beginStroke = (type: "draw" | "line") => {
@@ -84,36 +189,36 @@ export class BlitsyDraw
             return this.stroke;
         };
 
-        window.addEventListener("keydown", event => {
-            if (event.key === "Enter") {
-                fillColor(this.drawingContext, 0xFFFFFFFF, this.cursor.x, this.cursor.y);
-            }
-        });
-
         window.addEventListener("pointerdown", event => {
             setCursor(event);
+            this.brushColored = recolor(this.brush, this.activeColor);
 
-            if (HELD_KEYS.has('Shift')) {
+            if (this.activeTool === "fill") {
+                fillColor(this.drawingContext, this.activeColor, this.cursor.x, this.cursor.y);
+            } else if (HELD_KEYS.has('Shift') || this.activeTool === "line") {
                 beginStroke("line");
             } else {
+                const [ox, oy] = guessPivot(this.brush);
                 const stroke = beginStroke("draw");
-                drawSprite(this.drawingContext, this.brush, stroke.lastX - 3, stroke.lastY - 3);
+                drawSprite(this.drawingContext, this.brush, stroke.lastX - ox, stroke.lastY - oy);
             }
         });
         window.addEventListener("pointerup", event => {
             setCursor(event);
+            this.brushColored = recolor(this.brush, this.activeColor);
             if (this.stroke && this.stroke.type === "draw") {
                 drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);
                 this.stroke = undefined;
             } else if (this.stroke && this.stroke.type === "line") {
                 drawLine2(this.stroke.startX, this.stroke.startY, this.cursor.x, this.cursor.y);
                 this.stroke = undefined;
-            } else if (HELD_KEYS.has('Shift')) {
+            } else if (HELD_KEYS.has('Shift') || this.activeTool === "line") {
                 beginStroke("line");
             } 
         });
         window.addEventListener("pointermove", event => {
             setCursor(event);
+            this.brushColored = recolor(this.brush, this.activeColor);
             
             if (this.stroke && this.stroke.type === "draw") {
                 drawLine2(this.stroke.lastX, this.stroke.lastY, this.cursor.x, this.cursor.y);                
@@ -128,7 +233,7 @@ export class BlitsyDraw
 
     public update(dt: number): void
     {
-        this.render();  
+        this.render();
     }
 
     public render(): void
@@ -136,21 +241,18 @@ export class BlitsyDraw
         this.displayContext.clearRect(0, 0, 256, 256);
         this.displayContext.drawImage(this.drawingContext.canvas, 0, 0);
 
+        const [ox, oy] = guessPivot(this.brush);
         if (this.stroke && this.stroke.type === "line") {
             bresenham(this.stroke.startX, 
                       this.stroke.startY, 
                       this.stroke.lastX, 
-                      this.stroke.lastY, (x, y) => drawSprite(this.displayContext, this.brush, x - 3, y - 3));
+                      this.stroke.lastY, (x, y) => drawSprite(this.displayContext, this.brushColored, x - ox, y - oy));
         } else {
-            drawSprite(this.displayContext, this.brush, 
-                       this.cursor.x - 3, this.cursor.y - 3);
+            drawSprite(this.displayContext, this.brushColored, 
+                       this.cursor.x - ox, this.cursor.y - oy);
         }
     }
 }
-
-function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }  
 
 async function start()
 {
@@ -177,7 +279,28 @@ async function start()
             app.brush = sprite;
         });
     });
+
+    function addButton(iconContext: Context2D, onClick: () => void) {
+        const canvas = iconContext.canvas as HTMLCanvasElement;
+        canvas.className = "brush";
+        brushContainer.appendChild(canvas);
+        canvas.addEventListener("click", onClick);
+    }
+
+    addButton(drawIcon, () => app.activeTool = "draw");
+    addButton(lineIcon, () => app.activeTool = "line");
+    addButton(fillIcon, () => app.activeTool = "fill");
     
+    const colorContainer = document.getElementById("colors")!;
+    colors.forEach(color => {
+        const button = document.createElement("button");
+        button.setAttribute("style", `background-color: ${num2hex(color)}`);
+        colorContainer.appendChild(button);
+        button.addEventListener("click", () => {
+            app.activeColor = color;
+        });
+    });
+
     const encodeInput = document.getElementById("encode-image")! as HTMLInputElement;
     const encodeImage = document.createElement("img");
     encodeInput.addEventListener("change", event => {
