@@ -1,6 +1,7 @@
 import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, imageToContext } from 'blitsy';
 import FileSaver from 'file-saver';
 import { bresenham, drawLine, fillColor, recolor } from './draw';
+import { rgbaToColor, colorToHex } from './color';
 
 const drawIcon = decodeAsciiTexture(`
 ________
@@ -67,60 +68,8 @@ function randomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function num2hex(value: number): string
-{
-    return rgb2hex(num2rgb(value));
-}
-
-export function rgb2num(r: number, g: number, b: number, a: number = 255)
-{
-    return ((a << 24) | (b << 16) | (g << 8) | (r)) >>> 0;
-}
-
-export function num2rgb(value: number): [number, number, number]
-{
-    const r = (value >>  0) & 0xFF;
-    const g = (value >>  8) & 0xFF;
-    const b = (value >> 16) & 0xFF;
-    
-    return [r, g, b];
-}
-
-export function rgb2hex(color: [number, number, number]): string
-{
-    const [r, g, b] = color;
-    let rs = r.toString(16);
-    let gs = g.toString(16);
-    let bs = b.toString(16);
-
-    if (rs.length < 2) { rs = "0" + rs; }
-    if (gs.length < 2) { gs = "0" + gs; }
-    if (bs.length < 2) { bs = "0" + bs; }
-
-    return `#${rs}${gs}${bs}`;
-}
-
-export function hex2rgb(color: string,
-                        fallback = [255, 0, 255]): number[]
-{
-    const matches = color.match(/^#([0-9a-f]{6})$/i);
-
-    if (matches) 
-    {
-        const match = matches[1];
-
-        return [
-            parseInt(match.substr(0,2),16),
-            parseInt(match.substr(2,2),16),
-            parseInt(match.substr(4,2),16)
-        ];
-    }
-    
-    return fallback;
-}
-
 function randomColor() {
-    return rgb2num(randomInt(0, 255), randomInt(0, 255), randomInt(0, 255));
+    return rgbaToColor({ r: randomInt(0, 255), g: randomInt(0, 255), b: randomInt(0, 255), a: 255});
 }
 
 const colors = Array.from({ length: 16 }).map(i => randomColor());
@@ -294,7 +243,7 @@ async function start()
     const colorContainer = document.getElementById("colors")!;
     colors.forEach(color => {
         const button = document.createElement("button");
-        button.setAttribute("style", `background-color: ${num2hex(color)}`);
+        button.setAttribute("style", `background-color: #${colorToHex(color)}`);
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
             app.activeColor = color;

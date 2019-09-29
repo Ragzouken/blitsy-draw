@@ -1,10 +1,10 @@
-import { Context2D, Sprite, drawSprite, createContext2D, spriteToCanvas, canvasToSprite } from "blitsy";
-import { num2hex } from ".";
+import { Context2D, Sprite, drawSprite, createContext2D, canvasToSprite } from "blitsy";
+import { colorToHex } from "./color";
 
 export function recolor(sprite: Sprite, color: number): Sprite {
     const [width, height] = [sprite.rect.w, sprite.rect.h];
     const context = createContext2D(width, height);
-    context.fillStyle = num2hex(color);
+    context.fillStyle = '#' + colorToHex(color);
     context.fillRect(0, 0, width, height);
     context.globalCompositeOperation = "destination-in";
     drawSprite(context, sprite, 0, 0);
