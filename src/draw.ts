@@ -12,7 +12,7 @@ export function recolor(sprite: Sprite, color: number): Sprite {
 
 export function withPixels(context: Context2D, 
                            action: (pixels: Uint32Array) => void) {
-    const image = context.getImageData(0, 0, 256, 256);
+    const image = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
     action(new Uint32Array(image.data.buffer));
     context.putImageData(image, 0, 0);
 };
