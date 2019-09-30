@@ -1,67 +1,7 @@
 import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, encodeTexture, rgbaToColor, colorToHex, Vector2, makeVector2 } from 'blitsy';
 import FileSaver from 'file-saver';
 import { drawLine, fillColor, recolor } from './draw';
-
-const drawIcon = decodeAsciiTexture(`
-________
-_____X__
-____X_X_
-___X_X__
-__XXX___
-_X_X____
-_XX_____
-________
-`, 'X');
-
-const lineIcon = decodeAsciiTexture(`
-________
-______X_
-_____XX_
-____XX__
-___XX___
-__XX____
-_XX_____
-________
-`, 'X');
-
-const fillIcon = decodeAsciiTexture(`
-________
-_X_____X
-_X____X_
-_X__XXX_
-_XXX__X_
-_X____X_
-__XXXX__
-________
-`, 'X');
-
-const brushData = [
-`
-X
-`,
-`
-XX
-XX
-`,
-`
-_X_
-XXX
-_X_
-`,
-`
-_XX_
-XXXX
-XXXX
-_XX_
-`,
-`
-_XXX_
-XXXXX
-XXXXX
-XXXXX
-_XXX_
-`
-];
+import { brushData, drawIcon, lineIcon, fillIcon } from './icons';
 
 function randomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
