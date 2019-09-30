@@ -1,6 +1,6 @@
-import { Context2D, createContext2D, Sprite, decodeAsciiTexture, canvasToSprite, drawSprite, encodeTexture, imageToContext, rgbaToColor, colorToHex, Vector2, makeVector2 } from 'blitsy';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, encodeTexture, rgbaToColor, colorToHex, Vector2, makeVector2 } from 'blitsy';
 import FileSaver from 'file-saver';
-import { bresenham, drawLine, fillColor, recolor } from './draw';
+import { drawLine, fillColor, recolor } from './draw';
 
 const drawIcon = decodeAsciiTexture(`
 ________
@@ -72,7 +72,7 @@ function randomColor() {
 }
 
 const colors = Array.from({ length: 16 }).map(i => randomColor());
-const brushes = brushData.map(data => canvasToSprite(decodeAsciiTexture(data, 'X').canvas));
+const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
 document.addEventListener("keydown", event => HELD_KEYS.add(event.key));
@@ -89,7 +89,7 @@ export class Tool
     constructor(protected readonly app: BlitsyDraw) { }
 
     public cursor = "none";
-    public drawCursor(context: Context2D, pointer: Vector2): void { };
+    public drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void { };
     public start(pointer: Vector2): void { };
     public move(pointer: Vector2): void { };
     public stop(pointer: Vector2): void { };
@@ -99,7 +99,7 @@ export class DrawTool extends Tool
 {
     private lastPos: Vector2 | undefined = undefined;
 
-    drawCursor(context: Context2D, pointer: Vector2): void
+    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
     {
         const brush = this.app.brushColored;
         const [ox, oy] = guessPivot(brush);
@@ -135,7 +135,7 @@ export class LineTool extends Tool
 {
     private startPos: Vector2 | undefined = undefined;
 
-    drawCursor(context: Context2D, pointer: Vector2): void
+    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
     {
         const brush = this.app.brushColored;
         const [ox, oy] = guessPivot(brush);
@@ -179,8 +179,8 @@ export class FillTool extends Tool
 export class BlitsyDraw
 {
     private readonly displayCanvas: HTMLCanvasElement;
-    private readonly displayContext: Context2D;
-    public readonly drawingContext: Context2D;
+    private readonly displayContext: CanvasRenderingContext2D;
+    public readonly drawingContext: CanvasRenderingContext2D;
 
     public activeTool: ToolType = "draw";
     public activeBrush: Sprite;
@@ -273,7 +273,7 @@ export class BlitsyDraw
     }
 }
 
-function downloadContextAsTexture(context: Context2D, format='RGBA8', name = "drawing"): void {
+function downloadContextAsTexture(context: CanvasRenderingContext2D, format='RGBA8', name = "drawing"): void {
     const data = encodeTexture(context, format);
     const json = JSON.stringify(data);
     const blob = new Blob([json], {type: "text/plain;charset=utf-8"});
@@ -305,7 +305,7 @@ async function start()
         });
     });
 
-    function addButton(iconContext: Context2D, onClick: () => void) {
+    function addButton(iconContext: CanvasRenderingContext2D, onClick: () => void) {
         const canvas = iconContext.canvas as HTMLCanvasElement;
         canvas.className = "brush";
         brushContainer.appendChild(canvas);

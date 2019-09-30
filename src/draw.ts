@@ -1,4 +1,4 @@
-import { Context2D, Sprite, drawSprite, createContext2D, canvasToSprite, colorToHex } from "blitsy";
+import { Sprite, drawSprite, createContext2D, imageToSprite, colorToHex } from "blitsy";
 
 export function recolor(sprite: Sprite, color: number): Sprite {
     const [width, height] = [sprite.rect.w, sprite.rect.h];
@@ -7,24 +7,24 @@ export function recolor(sprite: Sprite, color: number): Sprite {
     context.fillRect(0, 0, width, height);
     context.globalCompositeOperation = "destination-in";
     drawSprite(context, sprite, 0, 0);
-    return canvasToSprite(context.canvas);
+    return imageToSprite(context.canvas);
 };
 
-export function withPixels(context: Context2D, 
+export function withPixels(context: CanvasRenderingContext2D, 
                            action: (pixels: Uint32Array) => void) {
     const image = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
     action(new Uint32Array(image.data.buffer));
     context.putImageData(image, 0, 0);
 };
 
-export function drawLine(context: Context2D, 
+export function drawLine(context: CanvasRenderingContext2D, 
                          brush: Sprite, 
                          x0: number, y0: number, 
                          x1: number, y1: number) {
     bresenham(x0, y0, x1, y1, (x, y) => drawSprite(context, brush, x, y));
 };
 
-export function fillColor(context: Context2D, 
+export function fillColor(context: CanvasRenderingContext2D, 
                           color: number, 
                           x: number, y: number) {
     const [width, height] = [context.canvas.width, context.canvas.height];
