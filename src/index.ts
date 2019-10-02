@@ -229,27 +229,35 @@ async function start()
     button.addEventListener("click", () => downloadContextAsTexture(app.drawingContext));
 
     const brushContainer = document.getElementById("brushes")!;
+    const brushButtons: HTMLElement[] = [];
     brushes.forEach(sprite => {
         const context = createContext2D(8, 8);
         drawSprite(context, sprite, 
                    4 - Math.floor(sprite.rect.w / 2), 
                    4 - Math.floor(sprite.rect.h / 2));
         const canvas = context.canvas as HTMLCanvasElement;
-        canvas.className = "brush";
         brushContainer.appendChild(canvas);
+        brushButtons.push(canvas);
         canvas.addEventListener("click", () => {
             if (app.activeTool === "fill") {
                 app.activeTool = "draw";
             }
             app.activeBrush = sprite;
+            brushButtons.forEach(button => button.removeAttribute("class"));
+            canvas.setAttribute("class", "selected");
         });
     });
 
+    const toolButtons: HTMLElement[] = [];
     function addButton(iconContext: CanvasRenderingContext2D, onClick: () => void) {
         const canvas = iconContext.canvas as HTMLCanvasElement;
-        canvas.className = "brush";
         brushContainer.appendChild(canvas);
-        canvas.addEventListener("click", onClick);
+        toolButtons.push(canvas);
+        canvas.addEventListener("click", () => {
+            toolButtons.forEach(button => button.removeAttribute("class"));
+            canvas.setAttribute("class", "selected");
+            onClick();
+        });
     }
 
     addButton(drawIcon, () => app.activeTool = "draw");
@@ -257,12 +265,16 @@ async function start()
     addButton(fillIcon, () => app.activeTool = "fill");
     
     const colorContainer = document.getElementById("colors")!;
+    const colorButtons: HTMLButtonElement[] = [];
     colors.forEach(color => {
         const button = document.createElement("button");
         button.setAttribute("style", `background-color: #${colorToHex(color)}`);
+        colorButtons.push(button);
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
             app.activeColor = color;
+            colorButtons.forEach(button => button.removeAttribute("class"));
+            button.setAttribute("class", "selected");
         });
     });
 }

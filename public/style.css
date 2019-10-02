@@ -27,17 +27,43 @@ canvas {
 
 #tools {
     width: 512px;
-
-    margin: auto;
     display: block;
+    margin: auto;
+}
+
+#brushes {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(1, 1fr);
+    padding: 8px;
+    grid-column-gap: 16px;
+    grid-row-gap: 16px;
+}
+
+#brushes > canvas {
+    width: 48px;
+    height: 48px;
+}
+
+#brushes > canvas.selected {
+    background-color: gray;
 }
 
 #colors > button {
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
+    border: solid white 1px;
 }
 
-.brush {
-    width: 32px;
-    height: 32px;
+#colors > button.selected {
+    border: solid white 5px;
+}
+
+#colors {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    padding: 8px;
+    grid-column-gap: 16px;
+    grid-row-gap: 16px;
 }
