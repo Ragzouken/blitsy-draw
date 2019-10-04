@@ -40,6 +40,16 @@ canvas {
     grid-row-gap: 16px;
 }
 
+#exports {
+    height: 32px;
+
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    padding: 8px;
+    grid-column-gap: 16px;
+    grid-row-gap: 16px;
+}
+
 #brushes > canvas {
     width: 48px;
     height: 48px;

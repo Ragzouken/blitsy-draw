@@ -1,17 +1,9 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, encodeTexture, rgbaToColor, colorToHex, Vector2, makeVector2 } from 'blitsy';
-import FileSaver from 'file-saver';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2 } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData, drawIcon, lineIcon, fillIcon } from './icons';
+import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage } from './utility';
 
-function randomInt(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomColor() {
-    return rgbaToColor({ r: randomInt(0, 255), g: randomInt(0, 255), b: randomInt(0, 255), a: 255});
-}
-
-const colors = Array.from({ length: 16 }).map(i => randomColor());
+const colors = Array.from({ length: 16 }).map(() => randomColor());
 const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
@@ -213,20 +205,15 @@ export class BlitsyDraw
     }
 }
 
-function downloadContextAsTexture(context: CanvasRenderingContext2D, format='RGBA8', name = "drawing"): void {
-    const data = encodeTexture(context, format);
-    const json = JSON.stringify(data);
-    const blob = new Blob([json], {type: "text/plain;charset=utf-8"});
-    FileSaver.saveAs(blob, "drawing.blitsy.json");
-}
-
 async function start()
 {
     const app = new BlitsyDraw();
     app.start();
 
-    const button = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
-    button.addEventListener("click", () => downloadContextAsTexture(app.drawingContext));
+    const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
+    downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
+    const downloadImageButton = document.getElementById("download-image") as HTMLButtonElement;
+    downloadImageButton.addEventListener("click", () => downloadCanvasAsImage(app.drawingContext.canvas));
 
     const brushContainer = document.getElementById("brushes")!;
     const brushButtons: HTMLElement[] = [];
@@ -247,6 +234,7 @@ async function start()
             canvas.setAttribute("class", "selected");
         });
     });
+    brushButtons[2].setAttribute("class", "selected");
 
     const toolButtons: HTMLElement[] = [];
     function addButton(iconContext: CanvasRenderingContext2D, onClick: () => void) {
@@ -263,7 +251,8 @@ async function start()
     addButton(drawIcon, () => app.activeTool = "draw");
     addButton(lineIcon, () => app.activeTool = "line");
     addButton(fillIcon, () => app.activeTool = "fill");
-    
+    toolButtons[0].setAttribute("class", "selected");
+
     const colorContainer = document.getElementById("colors")!;
     const colorButtons: HTMLButtonElement[] = [];
     colors.forEach(color => {
