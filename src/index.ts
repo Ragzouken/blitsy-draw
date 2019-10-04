@@ -36,7 +36,7 @@ export class DrawTool extends Tool
     {
         const brush = this.app.brushColored;
         const [ox, oy] = guessPivot(brush);
-        drawSprite(context, this.app.brushColored, pointer.x - ox, pointer.y - oy);
+        drawSprite(context, brush, pointer.x - ox, pointer.y - oy);
     }
 
     start(pointer: Vector2): void
@@ -156,6 +156,7 @@ export class BlitsyDraw
 
     public update(dt: number): void
     {
+        this.updateBrush();
         this.render();
     }
 
@@ -200,7 +201,11 @@ export class BlitsyDraw
 
     private updateBrush(): void
     {
-        this.brushColored = recolor(this.activeBrush, this.activeColor);
+        const erase = this.activeColor === 0;
+
+        const color = erase ? randomColor() : this.activeColor;
+        this.brushColored = recolor(this.activeBrush, color);
+        this.drawingContext.globalCompositeOperation = erase ? "destination-out" : "source-over";
     }
 }
 
