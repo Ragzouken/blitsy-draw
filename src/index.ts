@@ -1,4 +1,4 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2 } from 'blitsy';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData, drawIcon, lineIcon, fillIcon } from './icons';
 import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage } from './utility';
@@ -218,6 +218,35 @@ async function start()
     downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
     const downloadImageButton = document.getElementById("download-image") as HTMLButtonElement;
     downloadImageButton.addEventListener("click", () => downloadCanvasAsImage(app.drawingContext.canvas));
+    
+    const uploadTextureInput = document.getElementById("upload-blitsy-texture-input") as HTMLInputElement;
+    const uploadTextureButton = document.getElementById("upload-blitsy-texture-button") as HTMLButtonElement;
+    uploadTextureButton.addEventListener("click", () => uploadTextureInput.click());
+    uploadTextureInput.addEventListener("change", () => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const json = reader.result as string;
+            const data = JSON.parse(json);
+            const texture = decodeTexture(data);
+            app.drawingContext.drawImage(texture.canvas, 0, 0);
+        };
+        reader.readAsText(uploadTextureInput.files![0]);
+    });
+
+    const uploadImageInput = document.getElementById("upload-image-input") as HTMLInputElement;
+    const uploadImageButton = document.getElementById("upload-image-button") as HTMLButtonElement;
+    uploadImageButton.addEventListener("click", () => uploadImageInput.click());
+    uploadImageInput.addEventListener("change", () => {
+        const reader = new FileReader();
+        reader.onload = event => {
+            const image = document.createElement("img");
+            image.onload = () => {
+                app.drawingContext.drawImage(image, 0, 0);
+            };
+            image.src = event.target!.result as string;
+        };
+        reader.readAsDataURL(uploadImageInput.files![0]);
+    });
 
     const brushContainer = document.getElementById("brushes")!;
     const brushButtons: HTMLElement[] = [];

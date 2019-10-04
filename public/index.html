@@ -13,8 +13,12 @@
         <div id="brushes"></div>
         <div id="colors"></div>
         <div id="exports">
-            <button id="download-blitsy-texture">download as blitsy texture</button>
-            <button id="download-image">download as image</button>
+            <button id="download-blitsy-texture">save as blitsy texture</button>
+            <input hidden type="file" id="upload-blitsy-texture-input"></input>
+            <button id="upload-blitsy-texture-button">load blitsy texture</button>
+            <button id="download-image">save as PNG image</button>
+            <input hidden type="file" id="upload-image-input"></input>
+            <button id="upload-image-button">load image</button>
         </div>
     </div>
     <input id="encode-image" type="file" accept="image/*" hidden />
