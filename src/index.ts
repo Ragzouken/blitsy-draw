@@ -4,6 +4,7 @@ import { brushData, drawIcon, lineIcon, fillIcon } from './icons';
 import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage } from './utility';
 
 const colors = Array.from({ length: 16 }).map(() => randomColor());
+colors[0] = 0;
 const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
@@ -20,7 +21,7 @@ export class Tool
 {
     constructor(protected readonly app: BlitsyDraw) { }
 
-    public cursor = "none";
+    public cursor = "crosshair";
     public drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void { };
     public start(pointer: Vector2): void { };
     public move(pointer: Vector2): void { };
@@ -100,8 +101,6 @@ export class LineTool extends Tool
 
 export class FillTool extends Tool 
 {
-    public cursor = "crosshair";
-
     start(pointer: Vector2): void
     {
         fillColor(this.app.drawingContext, this.app.activeColor, pointer.x, pointer.y);
