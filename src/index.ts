@@ -1,6 +1,6 @@
 import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
-import { brushData, drawIcon, lineIcon, fillIcon } from './icons';
+import { brushData } from './icons';
 import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage } from './utility';
 
 const colors = Array.from({ length: 16 }).map(() => randomColor());
@@ -14,7 +14,12 @@ document.addEventListener("keyup", event => HELD_KEYS.delete(event.key));
 type ToolType = "draw" | "line" | "fill";
 
 function guessPivot(sprite: Sprite): [number, number] {
-    return [Math.ceil(sprite.rect.w / 2), Math.ceil(sprite.rect.h / 2)];
+    return [sprite.rect.w / 2, sprite.rect.h / 2];
+}
+
+function pivotPointer(sprite: Sprite, pointer: Vector2): [number, number] {
+    const [ox, oy] = guessPivot(sprite);
+    return [Math.round(pointer.x - ox), Math.round(pointer.y - oy)]; 
 }
 
 export class Tool
@@ -35,15 +40,16 @@ export class DrawTool extends Tool
     drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
     {
         const brush = this.app.brushColored;
-        const [ox, oy] = guessPivot(brush);
-        drawSprite(context, brush, pointer.x - ox, pointer.y - oy);
+        const [x, y] = pivotPointer(brush, pointer);
+
+        drawSprite(context, brush, x, y);
     }
 
     start(pointer: Vector2): void
     {
         const brush = this.app.brushColored;
-        const [ox, oy] = guessPivot(brush);
-        drawSprite(this.app.drawingContext, brush, pointer.x - ox, pointer.y - oy);
+        const [x, y] = pivotPointer(brush, pointer);
+        drawSprite(this.app.drawingContext, brush, x, y);
         this.lastPos = makeVector2(pointer.x, pointer.y);
     }
 
@@ -51,10 +57,9 @@ export class DrawTool extends Tool
     {
         if (!this.lastPos) return;
         const brush = this.app.brushColored;
-        const [ox, oy] = guessPivot(brush);
-        const [x0, y0] = [this.lastPos.x, this.lastPos.y];
-        const [x1, y1] = [pointer.x, pointer.y];
-        drawLine(this.app.drawingContext, brush, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
+        const [x0, y0] = pivotPointer(brush, this.lastPos);
+        const [x1, y1] = pivotPointer(brush, pointer);
+        drawLine(this.app.drawingContext, brush, x0, y0, x1, y1);
         this.lastPos = makeVector2(pointer.x, pointer.y);
     }
 
@@ -71,14 +76,13 @@ export class LineTool extends Tool
     drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
     {
         const brush = this.app.brushColored;
-        const [ox, oy] = guessPivot(brush);
-        const [px, py] = [pointer.x, pointer.y];
+        const [px, py] = pivotPointer(brush, pointer);
 
         if (this.startPos) {
-            const [sx, sy] = [this.startPos.x, this.startPos.y];
-            drawLine(context, brush, sx - ox, sy - oy, px - ox, py - oy);
+            const [sx, sy] = pivotPointer(brush, this.startPos);
+            drawLine(context, brush, sx, sy, px, py);
         } else {
-            drawSprite(context, this.app.brushColored, px - ox, py - oy);
+            drawSprite(context, this.app.brushColored, px, py);
         }
     }
 
@@ -91,10 +95,9 @@ export class LineTool extends Tool
     {
         if (!this.startPos) return;
         const brush = this.app.brushColored;
-        const [ox, oy] = guessPivot(brush);
-        const [x0, y0] = [this.startPos.x, this.startPos.y];
-        const [x1, y1] = [pointer.x, pointer.y];
-        drawLine(this.app.drawingContext, brush, x0 - ox, y0 - oy, x1 - ox, y1 - oy);
+        const [x0, y0] = pivotPointer(brush, this.startPos);
+        const [x1, y1] = pivotPointer(brush, pointer);
+        drawLine(this.app.drawingContext, brush, x0, y0, x1, y1);
         this.startPos = undefined;
     }
 }
@@ -270,20 +273,19 @@ async function start()
     brushButtons[2].setAttribute("class", "selected");
 
     const toolButtons: HTMLElement[] = [];
-    function addButton(iconContext: CanvasRenderingContext2D, onClick: () => void) {
-        const canvas = iconContext.canvas as HTMLCanvasElement;
-        brushContainer.appendChild(canvas);
-        toolButtons.push(canvas);
-        canvas.addEventListener("click", () => {
+    function setTool(id: string, onClick: () => void) {
+        const image = document.getElementById(id)!;
+        toolButtons.push(image);
+        image.addEventListener("click", () => {
             toolButtons.forEach(button => button.removeAttribute("class"));
-            canvas.setAttribute("class", "selected");
+            image.setAttribute("class", "selected");
             onClick();
         });
     }
 
-    addButton(drawIcon, () => app.activeTool = "draw");
-    addButton(lineIcon, () => app.activeTool = "line");
-    addButton(fillIcon, () => app.activeTool = "fill");
+    setTool("freehand-tool", () => app.activeTool = "draw");
+    setTool("line-tool", () => app.activeTool = "line");
+    setTool("fill-tool", () => app.activeTool = "fill");
     toolButtons[0].setAttribute("class", "selected");
 
     const colorContainer = document.getElementById("colors")!;

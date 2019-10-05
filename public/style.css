@@ -30,10 +30,9 @@ canvas {
     height: 512px;
     image-rendering: pixelated;
     cursor: none;
-    border: solid white;
-    border-width: 2px;
 
     margin: auto;
+    margin-bottom: 8px;
     display: block;
 }
 
@@ -62,12 +61,14 @@ canvas {
     grid-row-gap: 16px;
 }
 
-#brushes > canvas {
+#brushes > * {
     width: 48px;
     height: 48px;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 }
 
-#brushes > canvas.selected {
+#brushes > .selected {
     background-color: gray;
 }
 
