@@ -1,10 +1,9 @@
 import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData } from './icons';
-import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage } from './utility';
+import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors } from './utility';
 
-const colors = Array.from({ length: 16 }).map(() => randomColor());
-colors[0] = 0;
+let colors = randomPalette();
 const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
 
 const HELD_KEYS = new Set<string>();
@@ -216,6 +215,7 @@ async function start()
 {
     const app = new BlitsyDraw();
     app.start();
+    app.activeColor = colors[1];
 
     const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
     downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
@@ -254,16 +254,16 @@ async function start()
     const brushContainer = document.getElementById("brushes")!;
     const brushButtons: HTMLElement[] = [];
     brushes.forEach(sprite => {
-        const context = createContext2D(8, 8);
+        const context = createContext2D(16, 16);
         drawSprite(context, sprite, 
-                   4 - Math.floor(sprite.rect.w / 2), 
-                   4 - Math.floor(sprite.rect.h / 2));
+                   8 - Math.ceil(sprite.rect.w / 2), 
+                   8 - Math.ceil(sprite.rect.h / 2));
         const canvas = context.canvas as HTMLCanvasElement;
         brushContainer.appendChild(canvas);
         brushButtons.push(canvas);
         canvas.addEventListener("click", () => {
             if (app.activeTool === "fill") {
-                app.activeTool = "draw";
+                setTool("draw");
             }
             app.activeBrush = sprite;
             brushButtons.forEach(button => button.removeAttribute("class"));
@@ -272,33 +272,46 @@ async function start()
     });
     brushButtons[2].setAttribute("class", "selected");
 
-    const toolButtons: HTMLElement[] = [];
-    function setTool(id: string, onClick: () => void) {
-        const image = document.getElementById(id)!;
-        toolButtons.push(image);
-        image.addEventListener("click", () => {
-            toolButtons.forEach(button => button.removeAttribute("class"));
-            image.setAttribute("class", "selected");
-            onClick();
-        });
+    const toolButtons = new Map<ToolType, HTMLElement>();
+
+    function setTool(tool: ToolType) {
+        toolButtons.forEach(button => button.removeAttribute("class"));
+        toolButtons.get(tool)!.setAttribute("class", "selected");
+        app.activeTool = tool;
     }
 
-    setTool("freehand-tool", () => app.activeTool = "draw");
-    setTool("line-tool", () => app.activeTool = "line");
-    setTool("fill-tool", () => app.activeTool = "fill");
-    toolButtons[0].setAttribute("class", "selected");
+    function setToolButton(id: string, tool: ToolType) {
+        const image = document.getElementById(id)!;
+        toolButtons.set(tool, image);
+        image.addEventListener("click", () => setTool(tool));
+    }
+
+    setToolButton("freehand-tool", "draw");
+    setToolButton("line-tool", "line");
+    setToolButton("fill-tool", "fill");
+    setTool("draw");
 
     const colorContainer = document.getElementById("colors")!;
     const colorButtons: HTMLButtonElement[] = [];
-    colors.forEach(color => {
+    colors.forEach((color, i) => {
         const button = document.createElement("button");
         button.setAttribute("style", `background-color: #${colorToHex(color)}`);
         colorButtons.push(button);
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
-            app.activeColor = color;
+            app.activeColor = colors[i];
             colorButtons.forEach(button => button.removeAttribute("class"));
             button.setAttribute("class", "selected");
+        });
+    });
+
+    const randomisePaletteButton = document.getElementById("randomise-palette")!;
+    randomisePaletteButton.addEventListener("click", () => {
+        const colors2 = randomPalette();
+        remapColors(app.drawingContext, colors, colors2);
+        colors = colors2;
+        colorButtons.forEach((button, i) => {
+            button.setAttribute("style", `background-color: #${colorToHex(colors[i])}`);
         });
     });
 }
