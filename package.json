@@ -9,6 +9,7 @@
     "@types/node": "12.7.8",
     "blitsy": "^0.2.1",
     "file-saver": "^2.0.2",
+    "localforage": "^1.7.3",
     "react-scripts": "3.1.2",
     "typescript": "3.6.3"
   },

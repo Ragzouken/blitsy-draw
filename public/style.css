@@ -1,3 +1,15 @@
+:root {
+    --trans-color-1: rgb(32, 32, 32);
+    --trans-color-2: rgb(48, 48, 48);
+    --trans-gradient: repeating-linear-gradient(
+        45deg,
+        var(--trans-color-1),
+        var(--trans-color-1) 4px,
+        var(--trans-color-2) 4px,
+        var(--trans-color-2) 8px
+    );
+}
+
 html, body {
     background-color: black;
 }
@@ -8,15 +20,7 @@ html, body {
 }
 
 #root > canvas {
-    --color1: rgb(32, 32, 32);
-    --color2: rgb(48, 48, 48);
-    background: repeating-linear-gradient(
-        45deg,
-        var(--color1),
-        var(--color1) 4px,
-        var(--color2) 4px,
-        var(--color2) 8px
-    );
+    background: var(--trans-gradient);
 }
 
 canvas {
@@ -76,6 +80,10 @@ canvas {
     width: 48px;
     height: 48px;
     border: solid white 1px;
+}
+
+#eraser {
+    background: var(--trans-gradient);
 }
 
 #colors > button.selected {

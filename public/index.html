@@ -11,19 +11,24 @@
     </div>
     <div id="tools">
         <div id="brushes">
-            <img id="freehand-tool" src="./icons/freehand.png"></img>
-            <img id="line-tool" src="./icons/line.png"></img>
-            <img id="fill-tool" src="./icons/fill.png"></img>
+            <img title="Draw freehand" id="freehand-tool" src="./icons/freehand.png"></img>
+            <img title="Draw line" id="line-tool" src="./icons/line.png"></img>
+            <img title="Flood fill" id="fill-tool" src="./icons/fill.png"></img>
         </div>
         <div id="colors"></div>
         <div id="exports">
+            <button id="randomise-palette">randomise palette</button>
+            <input hidden type="color" id="edit-palette-color-input"></input>
+            <button id="edit-palette-color-button">edit color</button>
             <button id="download-blitsy-texture">save as blitsy texture</button>
             <input hidden type="file" id="upload-blitsy-texture-input"></input>
             <button id="upload-blitsy-texture-button">load blitsy texture</button>
             <button id="download-image">save as PNG image</button>
             <input hidden type="file" id="upload-image-input"></input>
             <button id="upload-image-button">load image</button>
-            <button id="randomise-palette">randomise palette</button>
+        </div>
+        <div id="color-picker">
+            
         </div>
     </div>
     <input id="encode-image" type="file" accept="image/*" hidden />

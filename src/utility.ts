@@ -50,6 +50,16 @@ export function remapColors(
     });
 }
 
+export function replaceColor(context: CanvasRenderingContext2D, prev: number, next: number) {
+    withPixels(context, pixels => {
+        for (let i = 0; i < pixels.length; ++i) {
+            if (pixels[i] == prev) {
+                pixels[i] = next;
+            }
+        }
+    });
+}
+
 export function hsvToRgba({ h, s, v}: {h:number,s:number,v:number}, a = 255) {
     let r = 0, g = 0, b = 0;
   

@@ -1,7 +1,15 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture } from 'blitsy';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData } from './icons';
-import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors } from './utility';
+import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor } from './utility';
+import localForage from 'localforage';
+import { drawColorPickerWheel } from './color-picker';
+import { PaletteTest } from './palette';
+
+let drawingStore = localForage.createInstance({
+    name: "blitsy-textures",
+    description: "Assortment of blitsy-encoded textures for use in other compatible applications",
+});
 
 let colors = randomPalette();
 const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
@@ -160,6 +168,7 @@ export class BlitsyDraw
     {
         this.updateBrush();
         this.render();
+        //drawColorPickerWheel(this.drawingContext);
     }
 
     public render(): void
@@ -213,9 +222,17 @@ export class BlitsyDraw
 
 async function start()
 {
+    localForage.keys().then(keys => {
+        console.log(keys);
+    }).catch(err => {
+        console.log(err);
+    });
+
     const app = new BlitsyDraw();
     app.start();
     app.activeColor = colors[1];
+    
+    //const test = new PaletteTest(document.getElementsByTagName("body")[0]);
 
     const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
     downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
@@ -291,17 +308,39 @@ async function start()
     setToolButton("fill-tool", "fill");
     setTool("draw");
 
-    const colorContainer = document.getElementById("colors")!;
+    let selectedPaletteIndex = 0;
+
     const colorButtons: HTMLButtonElement[] = [];
+    const editPaletteColorButton = document.getElementById("edit-palette-color-button") as HTMLButtonElement;
+    const editPaletteColorInput = document.getElementById("edit-palette-color-input") as HTMLInputElement;
+    editPaletteColorButton.addEventListener("click", () => {
+        editPaletteColorInput.value = "#" + colorToHex(app.activeColor);
+        editPaletteColorInput.click();
+    })
+    editPaletteColorInput.addEventListener("input", () => {
+        const htmlColor = editPaletteColorInput.value;
+        const prevColor = colors[selectedPaletteIndex];
+        const nextColor = hexToColor(editPaletteColorInput.value.slice(1));
+        replaceColor(app.drawingContext, prevColor, nextColor);
+        colors[selectedPaletteIndex] = nextColor;
+        colorButtons[selectedPaletteIndex].setAttribute("style", `background-color: ${htmlColor}`);
+    });
+
+    const colorContainer = document.getElementById("colors")!;
     colors.forEach((color, i) => {
         const button = document.createElement("button");
+        if (i === 0) {
+            button.setAttribute("id", "eraser");
+        }
         button.setAttribute("style", `background-color: #${colorToHex(color)}`);
         colorButtons.push(button);
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
             app.activeColor = colors[i];
+            selectedPaletteIndex = i;
             colorButtons.forEach(button => button.removeAttribute("class"));
             button.setAttribute("class", "selected");
+            editPaletteColorButton.disabled = i === 0;
         });
     });
 
@@ -314,6 +353,9 @@ async function start()
             button.setAttribute("style", `background-color: #${colorToHex(colors[i])}`);
         });
     });
+
+    //const pickerRoot = document.getElementById("color-picker");
+
 }
 
 start();
