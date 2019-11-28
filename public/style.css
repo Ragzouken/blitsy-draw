@@ -10,17 +10,25 @@
     );
 }
 
-html, body {
-    background-color: black;
-}
-
 #root {
-    margin-left: auto;
-    margin-right: auto;
+    display: inline-block;
 }
 
-#root > canvas {
+#scene-container {
+    z-index: -1;
     background: var(--trans-gradient);
+    
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+
+#scene-container > canvas {
+    width: 100%;
+    height: 100%;
 }
 
 canvas {
@@ -30,25 +38,24 @@ canvas {
 }
 
 #display {
-    width: 512px;
-    height: 512px;
+    /*width: 512px;*/
+    /*height: 512px;*/
     image-rendering: pixelated;
     cursor: none;
 
-    margin: auto;
     margin-bottom: 8px;
-    display: block;
+    display: inline-block;
 }
 
 #tools {
-    width: 512px;
-    display: block;
-    margin: auto;
+    width: 256px;
+    display: inline-block;
+    background: black;
 }
 
 #brushes {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(1, 1fr);
     padding: 8px;
     grid-column-gap: 16px;
@@ -92,9 +99,10 @@ canvas {
 
 #colors {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     grid-template-rows: repeat(2, 1fr);
     padding: 8px;
     grid-column-gap: 16px;
     grid-row-gap: 16px;
 }
+

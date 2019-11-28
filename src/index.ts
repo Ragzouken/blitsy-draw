@@ -1,10 +1,11 @@
 import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData } from './icons';
-import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor } from './utility';
+import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor, fitColorsToPalette } from './utility';
 import localForage from 'localforage';
 import { drawColorPickerWheel } from './color-picker';
 import { PaletteTest } from './palette';
+import { BlitsyDrawEditor } from './editor';
 
 let drawingStore = localForage.createInstance({
     name: "blitsy-textures",
@@ -117,6 +118,8 @@ export class FillTool extends Tool
     }
 }
 
+const size = [128, 96];
+
 export class BlitsyDraw
 {
     private readonly displayCanvas: HTMLCanvasElement;
@@ -134,7 +137,7 @@ export class BlitsyDraw
 
     constructor()
     {
-        const [width, height] = [128, 128];
+        const [width, height] = size;
         this.displayContext = createContext2D(width, height);
         this.displayCanvas = this.displayContext.canvas;
         this.displayCanvas.id = "display";
@@ -177,7 +180,8 @@ export class BlitsyDraw
         this.displayContext.drawImage(this.drawingContext.canvas, 0, 0);
 
         const tool = this.tools[this.activeTool];
-        this.displayCanvas.setAttribute("style", `cursor: ${tool.cursor}`);
+        const [width, height] = size;
+        this.displayCanvas.setAttribute("style", `cursor: ${tool.cursor}; width: ${width * 4}px; height: ${height * 4}px;`);
         tool.drawCursor(this.displayContext, this.cursor);
     }
 
@@ -232,6 +236,10 @@ async function start()
     app.start();
     app.activeColor = colors[1];
     
+    const display = document.getElementById("display") as HTMLElement;
+    const [width, height] = size;
+    display.setAttribute("style", `width: ${width * 4}; height: ${height * 4};`);
+
     //const test = new PaletteTest(document.getElementsByTagName("body")[0]);
 
     const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
@@ -262,6 +270,7 @@ async function start()
             const image = document.createElement("img");
             image.onload = () => {
                 app.drawingContext.drawImage(image, 0, 0);
+                fitColorsToPalette(app.drawingContext, colors);
             };
             image.src = event.target!.result as string;
         };
@@ -321,6 +330,7 @@ async function start()
         const htmlColor = editPaletteColorInput.value;
         const prevColor = colors[selectedPaletteIndex];
         const nextColor = hexToColor(editPaletteColorInput.value.slice(1));
+        app.activeColor = nextColor;
         replaceColor(app.drawingContext, prevColor, nextColor);
         colors[selectedPaletteIndex] = nextColor;
         colorButtons[selectedPaletteIndex].setAttribute("style", `background-color: ${htmlColor}`);
@@ -356,6 +366,8 @@ async function start()
 
     //const pickerRoot = document.getElementById("color-picker");
 
+    const editor = new BlitsyDrawEditor();
+    editor.start();
 }
 
 start();

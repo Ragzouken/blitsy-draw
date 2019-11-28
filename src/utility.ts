@@ -1,6 +1,49 @@
-import { rgbaToColor, encodeTexture } from "blitsy";
+import { rgbaToColor, encodeTexture, colorToRgba } from "blitsy";
 import FileSaver from "file-saver";
 import { withPixels } from "./draw";
+
+export function fitColorsToPalette(context: CanvasRenderingContext2D, palette: number[]) {      
+    const paletteRgbas = palette.map(colorToRgba);
+    
+    function matchColor(trueColor: number) {
+        const trueRgba = colorToRgba(trueColor);
+
+        // transparency
+        if (trueRgba.a <= .5) {
+            return palette[0];
+        }
+
+        let bestIndex = 1;
+        let bestDiff = 0xffffffff;
+
+        for (let i = 1; i < palette.length; ++i) {
+            const rgba = paletteRgbas[i];
+            const dr = rgba.r - trueRgba.r;
+            const dg = rgba.g - trueRgba.g;
+            const db = rgba.b - trueRgba.b;
+            const diff = Math.sqrt(dr * dr + dg * dg + db * db);
+
+            if (diff < bestDiff) {
+                bestIndex = i;
+                bestDiff = diff;
+            }
+        }
+
+        return palette[bestIndex];
+    }
+    
+    const mapping = new Map<number, number>();
+
+    withPixels(context, pixels => {
+        const colors = new Set<number>(pixels);
+
+        colors.forEach(color => {
+            mapping.set(color, matchColor(color));
+        });
+    });
+
+    remapColorsFromMap(context, mapping);
+}
 
 export function randomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -31,6 +74,17 @@ export function randomPalette(): number[] {
     return colors;
 }
 
+export function remapColorsFromMap(
+    context: CanvasRenderingContext2D,
+    mapping: Map<number, number>,
+) {
+    withPixels(context, pixels => {
+        for (let i = 0; i < pixels.length; ++i) {
+            pixels[i] = mapping.get(pixels[i])!;
+        }
+    });
+}
+
 export function remapColors(
     context: CanvasRenderingContext2D,
     prevPalette: number[],
@@ -43,11 +97,7 @@ export function remapColors(
         map.set(prevPalette[i], nextPalette[i]);
     }
 
-    withPixels(context, pixels => {
-        for (let i = 0; i < pixels.length; ++i) {
-            pixels[i] = map.get(pixels[i])!;
-        }
-    });
+    remapColorsFromMap(context, map);
 }
 
 export function replaceColor(context: CanvasRenderingContext2D, prev: number, next: number) {
