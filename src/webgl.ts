@@ -1,6 +1,5 @@
-import { createContext2D, Vector2, makeVector2 } from "blitsy";
+import { createContext2D, Vector2 } from "blitsy";
 import { withPixels } from "./draw";
-import { randomColor, randomInt } from "./utility";
 
 const paletteShaderVert = `
 uniform vec2 uOffset;

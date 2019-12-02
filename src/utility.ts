@@ -1,6 +1,18 @@
-import { rgbaToColor, encodeTexture, colorToRgba } from "blitsy";
+import { rgbaToColor, encodeTexture, colorToRgba, makeVector2, Vector2 } from "blitsy";
 import FileSaver from "file-saver";
 import { withPixels } from "./draw";
+
+export function scaleVector2(vector: Vector2, scale: number): Vector2 {
+    return makeVector2(vector.x * scale, vector.y * scale);
+}
+
+export function addVector2(a: Vector2, b: Vector2): Vector2 {
+    return makeVector2(a.x + b.x, a.y + b.y);
+}
+
+export function subVector2(a: Vector2, b: Vector2): Vector2 {
+    return makeVector2(a.x - b.x, a.y - b.y);
+}
 
 export function fitColorsToPalette(context: CanvasRenderingContext2D, palette: number[]) {      
     const paletteRgbas = palette.map(colorToRgba);

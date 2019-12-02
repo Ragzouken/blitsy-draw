@@ -1,4 +1,4 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor } from 'blitsy';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor, rgbaToColor } from 'blitsy';
 import { drawLine, fillColor, recolor } from './draw';
 import { brushData } from './icons';
 import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor, fitColorsToPalette } from './utility';
@@ -19,7 +19,7 @@ const HELD_KEYS = new Set<string>();
 document.addEventListener("keydown", event => HELD_KEYS.add(event.key));
 document.addEventListener("keyup", event => HELD_KEYS.delete(event.key));
 
-type ToolType = "draw" | "line" | "fill";
+type ToolType = "move" | "draw" | "line" | "fill";
 
 function guessPivot(sprite: Sprite): [number, number] {
     return [sprite.rect.w / 2, sprite.rect.h / 2];
@@ -147,6 +147,7 @@ export class BlitsyDraw
         this.activeBrush = brushes[2];
         this.brushColored = recolor(this.activeBrush, this.activeColor);
 
+        this.tools["move"] = new DrawTool(this);
         this.tools["draw"] = new DrawTool(this);
         this.tools["line"] = new LineTool(this);
         this.tools["fill"] = new FillTool(this);
@@ -232,6 +233,9 @@ async function start()
         console.log(err);
     });
 
+    const editor = new BlitsyDrawEditor();
+    editor.start();
+
     const app = new BlitsyDraw();
     app.start();
     app.activeColor = colors[1];
@@ -292,6 +296,7 @@ async function start()
                 setTool("draw");
             }
             app.activeBrush = sprite;
+            editor.activeBrush = sprite;
             brushButtons.forEach(button => button.removeAttribute("class"));
             canvas.setAttribute("class", "selected");
         });
@@ -304,6 +309,7 @@ async function start()
         toolButtons.forEach(button => button.removeAttribute("class"));
         toolButtons.get(tool)!.setAttribute("class", "selected");
         app.activeTool = tool;
+        editor.activeTool = tool;
     }
 
     function setToolButton(id: string, tool: ToolType) {
@@ -312,6 +318,7 @@ async function start()
         image.addEventListener("click", () => setTool(tool));
     }
 
+    setToolButton("move-tool", "move");
     setToolButton("freehand-tool", "draw");
     setToolButton("line-tool", "line");
     setToolButton("fill-tool", "fill");
@@ -347,6 +354,7 @@ async function start()
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
             app.activeColor = colors[i];
+            editor.activeColor = rgbaToColor({ r: i, g: 0, b: 0, a: 255 });
             selectedPaletteIndex = i;
             colorButtons.forEach(button => button.removeAttribute("class"));
             button.setAttribute("class", "selected");
@@ -359,15 +367,15 @@ async function start()
         const colors2 = randomPalette();
         remapColors(app.drawingContext, colors, colors2);
         colors = colors2;
+        editor.setPalette(colors);
         colorButtons.forEach((button, i) => {
             button.setAttribute("style", `background-color: #${colorToHex(colors[i])}`);
         });
     });
 
-    //const pickerRoot = document.getElementById("color-picker");
+    randomisePaletteButton.click();
 
-    const editor = new BlitsyDrawEditor();
-    editor.start();
+    //const pickerRoot = document.getElementById("color-picker");
 }
 
 start();
