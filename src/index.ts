@@ -341,6 +341,7 @@ async function start()
         replaceColor(app.drawingContext, prevColor, nextColor);
         colors[selectedPaletteIndex] = nextColor;
         colorButtons[selectedPaletteIndex].setAttribute("style", `background-color: ${htmlColor}`);
+        editor.setPalette(colors);
     });
 
     const colorContainer = document.getElementById("colors")!;

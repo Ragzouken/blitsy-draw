@@ -7,28 +7,31 @@ uniform vec2 uScale;
 
 attribute vec2 aPosition;
 attribute vec2 aTexcoord;
+attribute vec4 aColors;
 
 varying vec2 vTexcoord;
+varying vec4 vColor;
 
 void main() {
     vec2 position = (aPosition + uOffset) * uScale;
     gl_Position = vec4(position, 0.0, 1.0);
     vTexcoord = aTexcoord;
+    vColor = aColor;
 }
 `;
 
 const paletteShaderFrag = `
 precision mediump float;
 
-uniform vec4 uTint;
 uniform sampler2D uSprite;
 uniform sampler2D uPalette;
 
 varying vec2 vTexcoord;
+varying vec4 vColor;
 
 void main() {
     float index = texture2D(uSprite, vTexcoord).r;
-    gl_FragColor = texture2D(uPalette, vec2(index, .5)) * uTint;
+    gl_FragColor = texture2D(uPalette, vec2(index, .5)) * vColor;
 }
 `;
 
@@ -104,10 +107,15 @@ export class PaletteRenderer
         copyCanvasToWebGLTexture(this.gl, texture, canvas);
     }
 
+    public disposeCanvas(canvas: HTMLCanvasElement): void {
+        this.removeCanvasTexture(canvas);
+    }
+
     public renderScene(scene: SceneObject[]): void {
         const gl = this.gl;
 
         const positions = new Float32Array(6 * 2);
+        const colors = new Float32Array(6 * 4);
         const texcoords = new Float32Array([
             0,0, 1,0, 1,1,
             0,0, 1,1, 0,1,
@@ -140,16 +148,16 @@ export class PaletteRenderer
             const [x, y] = [object.position.x, object.position.y];
             const [w, h] = [canvas.width, canvas.height];
 
+            // texture
+            const texture = this.getCanvasTexture(canvas);
+            setUniformTexture(gl, this.spriteUniformLocation, texture, 1);
+
             // quad geometry
             positions.set([
                 x,y, x+w,y,   x+w,y+h,
                 x,y, x+w,y+h, x,  y+h,
             ]);
             gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
-
-            // texture
-            const texture = this.getCanvasTexture(canvas);
-            setUniformTexture(gl, this.spriteUniformLocation, texture, 1);
 
             // tint
             gl.uniform4fv(this.tintUniformLocation, object.tint || [1.0, 1.0, 1.0, 1.0]);
@@ -167,6 +175,13 @@ export class PaletteRenderer
             copyCanvasToWebGLTexture(this.gl, texture, canvas);
         }
         return texture;
+    }
+
+    private removeCanvasTexture(canvas: HTMLCanvasElement): void {
+        let texture = this.canvasTextures.get(canvas);
+        if (texture) {
+            this.gl.deleteTexture(texture);
+        }
     }
 }
 

@@ -115,7 +115,7 @@ export function remapColors(
 export function replaceColor(context: CanvasRenderingContext2D, prev: number, next: number) {
     withPixels(context, pixels => {
         for (let i = 0; i < pixels.length; ++i) {
-            if (pixels[i] == prev) {
+            if (pixels[i] === prev) {
                 pixels[i] = next;
             }
         }

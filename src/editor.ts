@@ -1,5 +1,5 @@
 import { SceneObject, PaletteRenderer } from "./webgl";
-import { randomColor, randomInt, scaleVector2, subVector2, addVector2 } from "./utility";
+import { randomColor, randomInt, subVector2, addVector2 } from "./utility";
 import { makeVector2, Vector2, createContext2D, Sprite, drawSprite, MAGENTA_SPRITE_4X4 } from "blitsy";
 import { withPixels, fillColor, drawLine, recolor } from "./draw";
 
@@ -23,7 +23,7 @@ export class Tool
     constructor(protected readonly app: BlitsyDrawEditor) { }
 
     public cursor = "crosshair";
-    public drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void { };
+    public drawCursor(context: CanvasRenderingContext2D, pointer: ToolPointer, object: SceneObject): void { };
     public start(pointer: ToolPointer, object: SceneObject): void { };
     public move(pointer: ToolPointer): void { };
     public stop(pointer: ToolPointer): void { };
@@ -37,8 +37,8 @@ export class Tool
         }
     }
 
-    protected scenePosToTargetPos(position: Vector2): Vector2 {
-        return floorVector2(scenePointToLocalPoint(this.target!.object, position));
+    protected scenePosToTargetPos(position: Vector2, object: SceneObject | undefined = undefined): Vector2 {
+        return floorVector2(scenePointToLocalPoint(object || this.target!.object, position));
     }
 }
 
@@ -59,8 +59,6 @@ export class MoveTool extends Tool
     {
         if (!this.grabPos) return;
 
-        const objectPos = this.scenePosToTargetPos(pointer.scenePos);
-
         const next = makeVector2(
             pointer.scenePos.x - this.grabPos.x, 
             pointer.scenePos.y - this.grabPos.y,
@@ -79,10 +77,12 @@ export class DrawTool extends Tool
 {
     private lastPos: Vector2 | undefined = undefined;
 
-    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
+    drawCursor(context: CanvasRenderingContext2D, pointer: ToolPointer, object: SceneObject): void
     {
+        const objectPos = this.scenePosToTargetPos(pointer.scenePos, object);
+
         const brush = this.app.brushColored;
-        const [x, y] = pivotPointer(brush, pointer);
+        const [x, y] = pivotPointer(brush, objectPos);
 
         drawSprite(context, brush, x, y);
     }
@@ -123,10 +123,12 @@ export class LineTool extends Tool
 {
     private startPos: Vector2 | undefined = undefined;
 
-    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
+    drawCursor(context: CanvasRenderingContext2D, pointer: ToolPointer, object: SceneObject): void
     {
+        const objectPos = this.scenePosToTargetPos(pointer.scenePos, object);
+
         const brush = this.app.brushColored;
-        const [px, py] = pivotPointer(brush, pointer);
+        const [px, py] = pivotPointer(brush, objectPos);
 
         if (this.startPos) {
             const [sx, sy] = pivotPointer(brush, this.startPos);
@@ -179,17 +181,19 @@ export class BlitsyDrawEditor
     private zoom: number = 0;
 
     // actions
+    private hoverObject: SceneObject | undefined = undefined;
     private actionObject: SceneObject | undefined = undefined;
-    private actionOffset = makeVector2(0, 0);
 
     public activeTool: ToolType = "draw";
     public activeBrush: Sprite = MAGENTA_SPRITE_4X4;
     public activeColor = 0xFF0000;
 
-    private readonly cursor: Vector2 = { x: 0, y: 0 };
     public brushColored: Sprite = MAGENTA_SPRITE_4X4;
 
     private tools: {[tool: string]: Tool} = {};
+
+    private cursorContext: CanvasRenderingContext2D;
+    private borders = new Map<HTMLCanvasElement, CanvasRenderingContext2D>();
 
     constructor() {
         this.sceneCanvas = document.createElement('canvas');
@@ -205,6 +209,8 @@ export class BlitsyDrawEditor
         this.tools["line"] = new LineTool(this);
         this.tools["fill"] = new FillTool(this);
 
+        this.cursorContext = createContext2D(1, 1);
+        
         this.test();
     }
     
@@ -246,7 +252,52 @@ export class BlitsyDrawEditor
         this.sceneContext.viewport(0, 0, w, h);
         this.sceneContext.clear(this.sceneContext.COLOR_BUFFER_BIT 
                               | this.sceneContext.DEPTH_BUFFER_BIT);
-        this.sceneRenderer.renderScene(this.scene);
+
+        const postScene: SceneObject[] = [];
+        const thickness = 2;
+        const margin = 1;
+
+        const cursorObject = this.actionObject || this.hoverObject;
+
+        for (let object of this.scene) {
+            let border = this.borders.get(object.canvas);
+
+            if (!border) {
+                border = createContext2D(
+                    object.canvas.width  + (margin + thickness) * 2, 
+                    object.canvas.height + (margin + thickness) * 2,
+                );
+                this.borders.set(object.canvas, border);
+
+                border.fillStyle = "#FFFFFF";
+                border.fillRect(0, 0, border.canvas.width, border.canvas.height);
+                border.clearRect(
+                    thickness, 
+                    thickness, 
+                    border.canvas.width - thickness * 2,
+                    border.canvas.height - thickness * 2,
+                );
+
+                this.sceneRenderer.flushCanvas(border.canvas);
+            }
+
+            postScene.push({
+                canvas: border.canvas,
+                position: makeVector2(object.position.x - (thickness + margin),
+                                      object.position.y - (thickness + margin)),
+                tint: object.tint,
+            })
+            postScene.push(object);
+
+            if (cursorObject && object === cursorObject) {
+                postScene.push({
+                    position: object.position,
+                    canvas: this.cursorContext.canvas,
+                });
+            }
+        }
+
+        this.sceneRenderer.renderScene(postScene);
     }
 
     public setPalette(colors: number[]): void {
@@ -276,21 +327,51 @@ export class BlitsyDrawEditor
         }
     }
 
+    private setHoverObjectFromPointcast(point: Vector2) {
+        const hits = pointcastScene(this.scene, point);
+        const object = hits.length > 0 
+                     ? hits[hits.length - 1] 
+                     : undefined;
+        this.hoverObject = object;
+
+        return object;
+    }
+
+    private setActionObjectFromPointcast(point: Vector2) {
+        const hits = pointcastScene(this.scene, point);
+        const object = hits.length > 0 
+                     ? hits[hits.length - 1] 
+                     : undefined;
+        this.setActionObject(object);
+
+        return object;
+    }
+
+    private setActionObject(object: SceneObject | undefined) {
+        this.actionObject = object;
+    }
+
+    private drawCursor(pointer: ToolPointer): void {
+        const object = this.actionObject || this.hoverObject;
+        
+        if (object) {
+            this.cursorContext.canvas.width = object.canvas.width;
+            this.cursorContext.canvas.height = object.canvas.height;
+            this.cursorContext.clearRect(0, 0, object.canvas.width, object.canvas.height);
+
+            this.tools[this.activeTool].drawCursor(this.cursorContext, pointer, object);
+            this.sceneRenderer.flushCanvas(this.cursorContext.canvas);
+        }
+    }
+
     private onPointerDown(event: PointerEvent): void {
         const scenePos = this.mouseEventToSceneCoords(event);
-        const hits = pointcastScene(this.scene, scenePos);
+        const object = this.setActionObjectFromPointcast(scenePos);
         
-        if (hits.length > 0) {
-            const object = hits[hits.length - 1];
-
-            this.actionObject = object;
-            this.actionOffset = makeVector2(
-                object.position.x - scenePos.x,
-                object.position.y - scenePos.y,
-            );
-
+        if (object) {
             this.updateBrush();
             this.tools[this.activeTool].start({scenePos}, object);
+            this.drawCursor({scenePos});
             this.sceneRenderer.flushCanvas(object.canvas);
         }
 
@@ -305,8 +386,7 @@ export class BlitsyDrawEditor
         if (this.actionObject)
             this.sceneRenderer.flushCanvas(this.actionObject!.canvas);
 
-        this.actionObject = undefined;
-        this.actionOffset = makeVector2(0, 0);
+        this.setActionObject(undefined);
     }
 
     private onPointerMove(event: PointerEvent): void {
@@ -316,7 +396,14 @@ export class BlitsyDrawEditor
         if (this.actionObject) {
             this.updateBrush();
             this.tools[this.activeTool].move({scenePos});
+            this.drawCursor({scenePos});
             this.sceneRenderer.flushCanvas(this.actionObject.canvas);
+        } else {
+            const object = this.setHoverObjectFromPointcast(scenePos);
+            this.updateBrush();
+            if (object) {    
+                this.drawCursor({scenePos});
+            }
         }
     }
 
