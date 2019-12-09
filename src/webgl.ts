@@ -80,7 +80,6 @@ export class PaletteRenderer
         this.colorAttributeLocation = this.gl.getAttribLocation(this.program, "aColor");
         this.offsetUniformLocation = this.gl.getUniformLocation(this.program, "uOffset")!;
         this.scaleUniformLocation =  this.gl.getUniformLocation(this.program, "uScale")!;
-        this.tintUniformLocation = this.gl.getUniformLocation(this.program, "uTint")!;
         this.spriteUniformLocation =  this.gl.getUniformLocation(this.program, "uSprite")!;
         this.paletteUniformLocation =  this.gl.getUniformLocation(this.program, "uPalette")!;
         
