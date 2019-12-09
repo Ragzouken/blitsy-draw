@@ -7,7 +7,7 @@ uniform vec2 uScale;
 
 attribute vec2 aPosition;
 attribute vec2 aTexcoord;
-attribute vec4 aColors;
+attribute vec4 aColor;
 
 varying vec2 vTexcoord;
 varying vec4 vColor;
@@ -50,15 +50,16 @@ export class PaletteRenderer
     private readonly program: WebGLProgram;
 
     private readonly positionAttributeLocation: GLint;
-    private readonly texccordAttributeLocation: GLint;
+    private readonly texcoordAttributeLocation: GLint;
+    private readonly colorAttributeLocation: GLint;
     private readonly offsetUniformLocation: WebGLUniformLocation;
     private readonly scaleUniformLocation: WebGLUniformLocation;
-    private readonly tintUniformLocation: WebGLUniformLocation;
     private readonly spriteUniformLocation: WebGLUniformLocation;
     private readonly paletteUniformLocation: WebGLUniformLocation;
 
     private readonly positionBuffer: WebGLBuffer;
     private readonly texcoordBuffer: WebGLBuffer;
+    private readonly colorBuffer: WebGLBuffer;
 
     private readonly paletteContext: CanvasRenderingContext2D;
     private readonly paletteTexture: WebGLTexture;
@@ -75,7 +76,8 @@ export class PaletteRenderer
         );
         
         this.positionAttributeLocation = this.gl.getAttribLocation(this.program, "aPosition");
-        this.texccordAttributeLocation = this.gl.getAttribLocation(this.program, "aTexcoord");
+        this.texcoordAttributeLocation = this.gl.getAttribLocation(this.program, "aTexcoord");
+        this.colorAttributeLocation = this.gl.getAttribLocation(this.program, "aColor");
         this.offsetUniformLocation = this.gl.getUniformLocation(this.program, "uOffset")!;
         this.scaleUniformLocation =  this.gl.getUniformLocation(this.program, "uScale")!;
         this.tintUniformLocation = this.gl.getUniformLocation(this.program, "uTint")!;
@@ -84,6 +86,7 @@ export class PaletteRenderer
         
         this.positionBuffer = this.gl.createBuffer()!;
         this.texcoordBuffer = this.gl.createBuffer()!;
+        this.colorBuffer = this.gl.createBuffer()!;
 
         this.paletteContext = createContext2D(256, 1);
         this.paletteTexture = createWebGLTexture(this.gl);
@@ -128,13 +131,17 @@ export class PaletteRenderer
 
         // set attributes (positions, texcoords)
         gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texcoordBuffer);
-        gl.enableVertexAttribArray(this.texccordAttributeLocation);
-        gl.vertexAttribPointer(this.texccordAttributeLocation, 2, this.gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this.texcoordAttributeLocation);
+        gl.vertexAttribPointer(this.texcoordAttributeLocation, 2, this.gl.FLOAT, false, 0, 0);
         gl.bufferData(this.gl.ARRAY_BUFFER, texcoords, this.gl.DYNAMIC_DRAW);
 
         gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         gl.enableVertexAttribArray(this.positionAttributeLocation);
         gl.vertexAttribPointer(this.positionAttributeLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
+        gl.enableVertexAttribArray(this.colorAttributeLocation);
+        gl.vertexAttribPointer(this.colorAttributeLocation, 4, this.gl.FLOAT, false, 0, 0);
 
         // set uniforms (tint, palette, sprite)
         const aspect = this.gl.canvas.height / this.gl.canvas.width;
@@ -157,10 +164,23 @@ export class PaletteRenderer
                 x,y, x+w,y,   x+w,y+h,
                 x,y, x+w,y+h, x,  y+h,
             ]);
-            gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
+            
+            const tint = object.tint || [1.0, 1.0, 1.0, 1.0];
 
+            for (let i = 0; i < 6; ++i) {
+                colors[i * 4 + 0] = tint[0];
+                colors[i * 4 + 1] = tint[1];
+                colors[i * 4 + 2] = tint[2];
+                colors[i * 4 + 3] = tint[3];
+            }
+
+            gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+            gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
+            gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
+            gl.bufferData(this.gl.ARRAY_BUFFER, colors, this.gl.DYNAMIC_DRAW);
+            
             // tint
-            gl.uniform4fv(this.tintUniformLocation, object.tint || [1.0, 1.0, 1.0, 1.0]);
+            //gl.uniform4fv(this.tintUniformLocation, object.tint || [1.0, 1.0, 1.0, 1.0]);
 
             // draw the six vertexes (= 2 triangles = 1 quad)
             gl.drawArrays(gl.TRIANGLES, 0, 6);
