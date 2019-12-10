@@ -116,12 +116,17 @@ export class PaletteRenderer
     public renderScene(scene: SceneObject[]): void {
         const gl = this.gl;
 
-        const positions = new Float32Array(6 * 2);
-        const colors = new Float32Array(6 * 4);
-        const texcoords = new Float32Array([
+        const vertsPerObject = 2 * 3; // two triangles per quad
+        const objectCount = scene.length;
+
+        const positions = new Float32Array(objectCount * vertsPerObject * 2);
+        const texcoords = new Float32Array(objectCount * vertsPerObject * 2);
+        const colors = new Float32Array(objectCount * vertsPerObject * 4);
+            
+        const texcoord = [
             0,0, 1,0, 1,1,
             0,0, 1,1, 0,1,
-        ]);
+        ];
         
         // set state (program, blending)
         gl.useProgram(this.program);
@@ -142,47 +147,48 @@ export class PaletteRenderer
         gl.enableVertexAttribArray(this.colorAttributeLocation);
         gl.vertexAttribPointer(this.colorAttributeLocation, 4, this.gl.FLOAT, false, 0, 0);
 
-        // set uniforms (tint, palette, sprite)
+        // set uniforms (palette, sprite)
         const aspect = this.gl.canvas.height / this.gl.canvas.width;
         gl.uniform2fv(this.offsetUniformLocation, [this.offset.x, this.offset.y]);
         gl.uniform2fv(this.scaleUniformLocation, [this.scale * aspect, this.scale]);
         setUniformTexture(gl, this.paletteUniformLocation, this.paletteTexture, 0);
 
+        // vertex attributes
         for (let i = 0; i < scene.length; ++i) {
             const object = scene[i];
             const canvas = object.canvas;
             const [x, y] = [object.position.x, object.position.y];
             const [w, h] = [canvas.width, canvas.height];
 
-            // texture
-            const texture = this.getCanvasTexture(canvas);
-            setUniformTexture(gl, this.spriteUniformLocation, texture, 1);
-
-            // quad geometry
-            positions.set([
+            const position = [
                 x,y, x+w,y,   x+w,y+h,
                 x,y, x+w,y+h, x,  y+h,
-            ]);
-            
-            const tint = object.tint || [1.0, 1.0, 1.0, 1.0];
+            ];
+            const color = object.tint || [1.0, 1.0, 1.0, 1.0];
 
-            for (let i = 0; i < 6; ++i) {
-                colors[i * 4 + 0] = tint[0];
-                colors[i * 4 + 1] = tint[1];
-                colors[i * 4 + 2] = tint[2];
-                colors[i * 4 + 3] = tint[3];
+            positions.set(position, i * vertsPerObject * 2);
+            texcoords.set(texcoord, i * vertsPerObject * 2);
+
+            // same color on each vertex
+            for (let j = 0; j < vertsPerObject; ++j) {
+                colors.set(color, i * vertsPerObject * 4 + j * 4);
             }
+        }
 
-            gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
-            gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
-            gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
-            gl.bufferData(this.gl.ARRAY_BUFFER, colors, this.gl.DYNAMIC_DRAW);
-            
-            // tint
-            //gl.uniform4fv(this.tintUniformLocation, object.tint || [1.0, 1.0, 1.0, 1.0]);
+        // update vertex attribute buffers
+        gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.DYNAMIC_DRAW);
+        gl.bindBuffer(this.gl.ARRAY_BUFFER, this.texcoordBuffer);
+        gl.bufferData(this.gl.ARRAY_BUFFER, texcoords, this.gl.DYNAMIC_DRAW);
+        gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
+        gl.bufferData(this.gl.ARRAY_BUFFER, colors, this.gl.DYNAMIC_DRAW);
 
-            // draw the six vertexes (= 2 triangles = 1 quad)
-            gl.drawArrays(gl.TRIANGLES, 0, 6);
+        // draw each quad with its texture
+        for (let i = 0; i < scene.length; ++i) {
+            const object = scene[i];
+            const texture = this.getCanvasTexture(object.canvas);
+            setUniformTexture(gl, this.spriteUniformLocation, texture, 1);
+            gl.drawArrays(gl.TRIANGLES, i * vertsPerObject, vertsPerObject);
         }
     }
 
