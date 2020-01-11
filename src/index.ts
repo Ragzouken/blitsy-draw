@@ -273,8 +273,7 @@ async function start()
         reader.onload = event => {
             const image = document.createElement("img");
             image.onload = () => {
-                // TODO: this isn't right but i'm too tired for coordinates...
-                const context = flippedY(imageToContext(image));
+                const context = imageToContext(image);
                 fitColorsToPalette(context, colors);
                 editor.addContext(context);
             };

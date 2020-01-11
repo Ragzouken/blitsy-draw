@@ -451,6 +451,7 @@ export class BlitsyDrawEditor
         let posY = (2 * ((h - y) / h)) - 1;
 
         posX *= aspect;
+        posY *= -1;
 
         return makeVector2(
             (posX / scale) - offset.x,

@@ -150,7 +150,7 @@ export class PaletteRenderer
         // set uniforms (palette, sprite)
         const aspect = this.gl.canvas.height / this.gl.canvas.width;
         gl.uniform2fv(this.offsetUniformLocation, [this.offset.x, this.offset.y]);
-        gl.uniform2fv(this.scaleUniformLocation, [this.scale * aspect, this.scale]);
+        gl.uniform2fv(this.scaleUniformLocation, [this.scale * aspect, this.scale * -1]);
         setUniformTexture(gl, this.paletteUniformLocation, this.paletteTexture, 0);
 
         // vertex attributes
