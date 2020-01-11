@@ -249,10 +249,6 @@ export class BlitsyDrawEditor
             object.tint = [1, 1, 1, darken ? 1 : .25];
         }
 
-        this.sceneContext.viewport(0, 0, w, h);
-        this.sceneContext.clear(this.sceneContext.COLOR_BUFFER_BIT 
-                              | this.sceneContext.DEPTH_BUFFER_BIT);
-
         const postScene: SceneObject[] = [];
         const thickness = 2;
         const margin = 1;
@@ -297,11 +293,25 @@ export class BlitsyDrawEditor
             }
         }
 
+        this.sceneContext.viewport(0, 0, w, h);
+        this.sceneContext.clear(this.sceneContext.COLOR_BUFFER_BIT 
+                              | this.sceneContext.DEPTH_BUFFER_BIT);
         this.sceneRenderer.renderScene(postScene);
     }
 
     public setPalette(colors: number[]): void {
         this.sceneRenderer.setPalette(colors);
+    }
+
+    public addContext(context: CanvasRenderingContext2D): SceneObject {
+        const object: SceneObject = {
+            canvas: context.canvas,
+            position: { x: 0, y: 0, },
+        };
+
+        this.scene.push(object);
+
+        return object;
     }
 
     private test(): void {
@@ -319,11 +329,8 @@ export class BlitsyDrawEditor
 
         this.scene.length = 0;
         for (let i = 0; i < 4; ++i) {
-            const object: SceneObject = { 
-                canvas: Math.random() > .5 ? test1.canvas : test2.canvas,
-                position: makeVector2(randomInt(-64, 64), randomInt(-32, 32)),
-            };
-            this.scene.push(object);
+            const object = this.addContext(Math.random() > .5 ? test1 : test2);
+            object.position = makeVector2(randomInt(-64, 64), randomInt(-32, 32));
         }
     }
 
@@ -422,7 +429,12 @@ export class BlitsyDrawEditor
     }
 
     private mouseEventToSceneCoords(event: MouseEvent): Vector2 {
-        let [x, y] = [event.clientX, event.clientY];
+        const client = makeVector2(event.clientX, event.clientY);
+        return this.clientCoordsToSceneCoords(client);
+    }
+
+    private clientCoordsToSceneCoords(client: Vector2): Vector2 {
+        let [x, y] = [client.x, client.y];
         const [w, h] = [this.sceneCanvas.width, this.sceneCanvas.height];
         const offset = this.sceneRenderer.offset;
         const scale = this.sceneRenderer.scale;

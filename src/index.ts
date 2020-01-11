@@ -1,5 +1,5 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor, rgbaToColor } from 'blitsy';
-import { drawLine, fillColor, recolor } from './draw';
+import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor, rgbaToColor, imageToContext } from 'blitsy';
+import { drawLine, fillColor, recolor, flippedY } from './draw';
 import { brushData } from './icons';
 import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor, fitColorsToPalette } from './utility';
 import localForage from 'localforage';
@@ -273,8 +273,10 @@ async function start()
         reader.onload = event => {
             const image = document.createElement("img");
             image.onload = () => {
-                app.drawingContext.drawImage(image, 0, 0);
-                fitColorsToPalette(app.drawingContext, colors);
+                // TODO: this isn't right but i'm too tired for coordinates...
+                const context = flippedY(imageToContext(image));
+                fitColorsToPalette(context, colors);
+                editor.addContext(context);
             };
             image.src = event.target!.result as string;
         };

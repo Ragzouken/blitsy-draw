@@ -41,7 +41,7 @@ export function fitColorsToPalette(context: CanvasRenderingContext2D, palette: n
             }
         }
 
-        return palette[bestIndex];
+        return rgbaToColor({ r: bestIndex, g: 0, b: 0, a: 255, }); //palette[bestIndex];
     }
     
     const mapping = new Map<number, number>();

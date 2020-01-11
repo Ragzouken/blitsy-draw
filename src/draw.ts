@@ -10,6 +10,19 @@ export function recolor(sprite: Sprite, color: number): Sprite {
     return imageToSprite(context.canvas);
 };
 
+export function flippedY(context: CanvasRenderingContext2D): CanvasRenderingContext2D {
+    const [w, h] = [context.canvas.width, context.canvas.height];
+    const flipped = createContext2D(w, h);
+
+    flipped.save();
+    flipped.translate(0, h);
+    flipped.scale(1, -1);
+    flipped.drawImage(context.canvas, 0, 0, w, h, 0, 0, w, h);
+    flipped.restore();
+
+    return flipped;
+}
+
 export function withPixels(context: CanvasRenderingContext2D, 
                            action: (pixels: Uint32Array) => void) {
     const image = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
