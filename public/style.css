@@ -8,56 +8,163 @@
         var(--trans-color-2) 4px,
         var(--trans-color-2) 8px
     );
+
+    --action-light: #FFD800;
+    --action-dark: rgb(180, 157, 27);
+
+    --sidebar-background-light: #792368;
+    --sidebar-background-dark: #754d6d;
+
+    --section-background-light: #367b6b;
+    --section-background-dark: #367b6b;
 }
 
 html, body {
-    width: 100vw;
-    height: 100vh;
     margin: 0;
     padding: 0;
+    font-family: sans-serif;
+  
     overflow: hidden;
+    display: flex;
+  
+    width: 100%;
+    height: 100%;
+  
+    background-color: black;
+}
+
+#sidebar
+{
+    width: 320px;
+
+    color: white;
+    background-color: var(--sidebar-background-light);
+
+    flex: none;
+
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+
+#scene-container {
+    flex: 1;
+    overflow: hidden;
+
+    background: var(--trans-gradient);
+}
+
+.section 
+{
+    margin: 16px;
+    padding: 16px;
+    background-color: var(--section-background-light);
+}
+
+.section > h1
+{
+    color: var(--action-light);
+    font-size: 1.5em;
+    margin-top: 0;
+}
+
+.section > h2
+{
+    font-size: 1em;
+    font-weight: bold;
+    color: #cef0df;
+
+    margin-bottom: .25em;
+}
+
+.section > p
+{
+    margin-bottom: 0;
+}
+
+button, select
+{
+    background-color: var(--action-light);
+    border: 0;
+    padding: 3px 6px;
+    font-weight: bold;
+}
+
+button:disabled, select:disabled
+{
+    background-color: var(--action-dark);
+    color: black;
+}
+
+a
+{
+    color: var(--action-light);
+}
+
+ol, ul
+{
+    padding-left: 20px;
+    margin: 8px 0px;
+}
+
+ol > li, ul > li
+{
+    margin: 8px 0px;
+}
+
+ol > li:last-child, ul > li:last-child
+{
+    margin: 0px;
+}
+
+em
+{
+    font-weight: bold;
+    color: var(--action-light);
+}
+
+input, textarea
+{
+    border: 0;
+    background-color: black;
+    color: white;
+    padding: 3px 6px;
+}
+
+input
+{
+    margin-right: 6px;
+}
+
+/* width */
+::-webkit-scrollbar {
+    color: black;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+    background: var(--sidebar-background-dark);
+    border-left: solid 1px black; 
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+    background: var(--action-dark);
+    border-left: solid 1px black; 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+    background: var(--action-light); 
 }
 
 #root {
     display: inline-block;
 }
 
-#scene-container {
-    background: var(--trans-gradient);
-
-    width: 100vw;
-    height: 100vh;
-}
-
 
 #scene-container > canvas {
     width: 100%;
     height: 100%;
-}
-
-canvas {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges;
-    image-rendering: -moz-crisp-edges;
-}
-
-#display {
-    /*width: 512px;*/
-    /*height: 512px;*/
-    image-rendering: pixelated;
-    cursor: none;
-
-    margin-bottom: 8px;
-    display: inline-block;
-}
-
-#tools {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 256px;
-    display: inline-block;
-    background: black;
 }
 
 #brushes {
@@ -113,3 +220,6 @@ canvas {
     grid-row-gap: 16px;
 }
 
+.pixel-size {
+    width: 100px;
+}

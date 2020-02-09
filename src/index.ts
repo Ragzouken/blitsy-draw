@@ -141,7 +141,7 @@ export class BlitsyDraw
         this.displayContext = createContext2D(width, height);
         this.displayCanvas = this.displayContext.canvas;
         this.displayCanvas.id = "display";
-        document.getElementById("root")!.appendChild(this.displayContext.canvas);
+        //document.getElementById("root")!.appendChild(this.displayContext.canvas);
         this.drawingContext = createContext2D(width, height);
 
         this.activeBrush = brushes[2];
@@ -240,11 +240,22 @@ async function start()
     app.start();
     app.activeColor = colors[1];
     
-    const display = document.getElementById("display") as HTMLElement;
+    //const display = document.getElementById("display") as HTMLElement;
     const [width, height] = size;
-    display.setAttribute("style", `width: ${width * 4}; height: ${height * 4};`);
+    //display.setAttribute("style", `width: ${width * 4}; height: ${height * 4};`);
 
     //const test = new PaletteTest(document.getElementsByTagName("body")[0]);
+
+    const createImageButton = document.getElementById("create-image-button") as HTMLButtonElement;
+    const createWidthInput = document.getElementById("create-width-input") as HTMLInputElement;
+    const createHeightInput = document.getElementById("create-height-input") as HTMLInputElement;
+
+    createImageButton.addEventListener('click', () => {
+        const width = parseInt(createWidthInput.value);
+        const height = parseInt(createHeightInput.value);
+        const image = createContext2D(width, height);
+        editor.addContext(image);
+    });
 
     const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
     downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
@@ -326,6 +337,15 @@ async function start()
     setTool("draw");
 
     let selectedPaletteIndex = 0;
+
+    editor.setPalette([
+        0, 
+        randomColor(), 
+        randomColor(),
+        0xFF0000FF,
+        0xFFFF00FF,
+        0xFF00FFFF,
+    ]);
 
     const colorButtons: HTMLButtonElement[] = [];
     const editPaletteColorButton = document.getElementById("edit-palette-color-button") as HTMLButtonElement;

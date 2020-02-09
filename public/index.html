@@ -2,38 +2,92 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <link rel="stylesheet" href="basic.css">
     <link rel="stylesheet" href="style.css">
     <title>blitsy draw</title>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <input id="encode-image" type="file" accept="image/*" hidden />
+    <noscript>
+        flicksy requires javascript and a modern graphical browser
+    </noscript>
+    <div id="sidebar">
+        <div id="drawing-sidebar" class="panel">
+            <div class="section">
+                <h1>blitsy draw</h1>
+                <h2>drawing tool made with blitsy</h2>    
+                <ol>
+                    <li>create a drawing using the <em>drawing board</em> section below</li>
+                    <li>click the <em>draw</em> button to enter the drawing mode</li>
+                    <li>pick a brush size and colour to draw in</li>
+                    <li>click and drag on a drawing to draw on it</li>
+                </ol>
+            </div>
+            <div class="section">
+                <h1>drawing board</h1>
+                
+                <h2>create drawing</h2>
+                <div id="create">
+                    <input id="create-width-input" class="pixel-size" type="number">
+                    x
+                    <input id="create-height-input" class="pixel-size" type="number">
+                    <button id="create-image-button">create image</button>
+                
+                    <button id="create-drawing-button" title="Create a new drawing and add it to this drawing board">create</button>
+                </div>
+
+                <h2>import drawing</h2>
+                <div id="exports">
+                    <button id="randomise-palette">randomise palette</button>
+                    <input hidden type="color" id="edit-palette-color-input">
+                    <button id="edit-palette-color-button">edit color</button>
+                    <button id="download-blitsy-texture">save as blitsy texture</button>
+                    <input hidden type="file" id="upload-blitsy-texture-input">
+                    <button id="upload-blitsy-texture-button">load blitsy texture</button>
+                    <button id="download-image">save as PNG image</button>
+                    <input hidden type="file" id="upload-image-input">
+                    <button id="upload-image-button">load image</button>
+                </div>
+            </div>
+            <div class="line-tabs">
+                <button id="drawing-select-button" title="Switch to select mode, in which you can select drawings and drag them around">select & move</button>
+                <button id="drawing-draw-button" title="Switch to draw mode, in which you can edit drawings">draw</button>
+            </div>
+            <div class="section" id="selected-drawing-section">
+                <h1>selected drawing</h1>
+                <h2>name</h2>
+                <div class="rename-delete">
+                    <input id="drawing-name" title="Name of the selected drawing">
+                    <button id="delete-drawing-button" class="delete" title="Delete the selected drawing">delete</button>
+                </div>
+                <h2>layering</h2>
+                <div class="button-row">
+                    <button id="pin-higher" title="Raise this drawing further in front">raise</button>
+                    <button id="pin-lower" title="Lower this drawing further behind">lower</button>
+                </div>
+                <h2>other</h2>
+                <div class="button-row">
+                    <button id="duplicate-drawing-button" title="create a copy of this drawing">duplicate</button>
+                </div>
+            </div>
+            <div class="section" id="brush-settings">
+                <h1>brush settings</h1>
+                <h2>size</h2>
+                <div id="brushes">
+                    <img title="Move drawings" id="move-tool" src="./icons/move.png"></img>
+                    <img title="Draw freehand" id="freehand-tool" src="./icons/freehand.png"></img>
+                    <img title="Draw line" id="line-tool" src="./icons/line.png"></img>
+                    <img title="Flood fill" id="fill-tool" src="./icons/fill.png"></img>
+                </div>
+                <h2>color</h2>
+                <div id="colors">
+                </div>
+                <h2>modify palette</h2>
+                <input type="color" id="color-input"><button id="reset-palette" title="Replace all the palette with random colours">randomise palette</button>
+            </div>
+        </div>
+    </div>
     <div id="scene-container">
     </div>
-    <div id="root">
-    </div>
-    <div id="tools">
-        <div id="brushes">
-            <img title="Move drawings" id="move-tool" src="./icons/move.png"></img>
-            <img title="Draw freehand" id="freehand-tool" src="./icons/freehand.png"></img>
-            <img title="Draw line" id="line-tool" src="./icons/line.png"></img>
-            <img title="Flood fill" id="fill-tool" src="./icons/fill.png"></img>
-        </div>
-        <div id="colors"></div>
-        <div id="exports">
-            <button id="randomise-palette">randomise palette</button>
-            <input hidden type="color" id="edit-palette-color-input"></input>
-            <button id="edit-palette-color-button">edit color</button>
-            <button id="download-blitsy-texture">save as blitsy texture</button>
-            <input hidden type="file" id="upload-blitsy-texture-input"></input>
-            <button id="upload-blitsy-texture-button">load blitsy texture</button>
-            <button id="download-image">save as PNG image</button>
-            <input hidden type="file" id="upload-image-input"></input>
-            <button id="upload-image-button">load image</button>
-        </div>
-        <div id="color-picker">
-            
-        </div>
-    </div>
-    <input id="encode-image" type="file" accept="image/*" hidden />
   </body>
 </html>

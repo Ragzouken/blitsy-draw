@@ -210,8 +210,6 @@ export class BlitsyDrawEditor
         this.tools["fill"] = new FillTool(this);
 
         this.cursorContext = createContext2D(1, 1);
-        
-        this.test();
     }
     
     public start(): void {
@@ -312,26 +310,6 @@ export class BlitsyDrawEditor
         this.scene.push(object);
 
         return object;
-    }
-
-    private test(): void {
-        this.sceneRenderer.setPalette([
-            0, 
-            randomColor(), 
-            randomColor(),
-            0xFF0000FF,
-            0xFFFF00FF,
-            0xFF00FFFF,
-        ]);
-
-        const test1 = generateTestDrawing(64, 32, 1);
-        const test2 = generateTestDrawing(32, 24, .25);
-
-        this.scene.length = 0;
-        for (let i = 0; i < 4; ++i) {
-            const object = this.addContext(Math.random() > .5 ? test1 : test2);
-            object.position = makeVector2(randomInt(-64, 64), randomInt(-32, 32));
-        }
     }
 
     private setHoverObjectFromPointcast(point: Vector2) {
