@@ -33,26 +33,17 @@
                 
                 <h2>add blank drawing</h2>
                 <div id="create">
-                    <input id="create-width-input" class="pixel-size" type="number">
+                    <input id="create-width-input" class="pixel-size" type="number" value="64">
                     x
-                    <input id="create-height-input" class="pixel-size" type="number">
-                    <button id="create-image-button">create image</button>
-                
-                    <button id="create-drawing-button" title="Create a new drawing and add it to this drawing board">create</button>
+                    <input id="create-height-input" class="pixel-size" type="number" value="64">
+                    <button id="create-image-button">create</button>
                 </div>
 
                 <h2>import drawing</h2>
-                <div id="exports">
-                    <button id="randomise-palette">randomise palette</button>
-                    <input hidden type="color" id="edit-palette-color-input">
-                    <button id="edit-palette-color-button">edit color</button>
-                    <button id="download-blitsy-texture">save as blitsy texture</button>
-                    <input hidden type="file" id="upload-blitsy-texture-input">
-                    <button id="upload-blitsy-texture-button">load blitsy texture</button>
-                    <button id="download-image">save as PNG image</button>
-                    <input hidden type="file" id="upload-image-input">
-                    <button id="upload-image-button">load image</button>
-                </div>
+                <button id="upload-blitsy-texture-button">import blitsy texture</button>
+                <button id="upload-image-button">import image</button>
+                <input hidden type="file" id="upload-blitsy-texture-input">
+                <input hidden type="file" id="upload-image-input">
             </div>
             <div class="section" id="selected-drawing-section">
                 <h1>selected drawing</h1>
@@ -69,6 +60,8 @@
                 <h2>other</h2>
                 <div class="button-row">
                     <button id="duplicate-drawing-button" title="create a copy of this drawing">duplicate</button>
+                    <button id="download-blitsy-texture">download blitsy texture</button>
+                    <button id="download-image">download PNG</button>
                 </div>
             </div>
             <div class="section" id="brush-settings">
@@ -84,7 +77,9 @@
                 <div id="colors">
                 </div>
                 <h2>modify palette</h2>
-                <input type="color" id="color-input"><button id="reset-palette" title="Replace all the palette with random colours">randomise palette</button>
+                <input hidden type="color" id="edit-palette-color-input">
+                <button id="edit-palette-color-button">edit color</button>
+                <button id="randomise-palette" title="Replace all the palette with random colours">randomise palette</button>
             </div>
         </div>
     </div>

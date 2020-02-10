@@ -1,16 +1,9 @@
-import { createContext2D, Sprite, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, Vector2, makeVector2, decodeTexture, hexToColor, rgbaToColor, imageToContext } from 'blitsy';
-import { drawLine, fillColor, recolor, flippedY } from './draw';
+import { createContext2D, decodeAsciiTexture, imageToSprite, drawSprite, colorToHex, hexToColor, rgbaToColor, imageToContext } from 'blitsy';
 import { brushData } from './icons';
-import { randomColor, downloadCanvasAsTexture, downloadCanvasAsImage, randomPalette, remapColors, replaceColor, fitColorsToPalette } from './utility';
+import { randomColor, randomPalette, fitColorsToPalette } from './utility';
 import localForage from 'localforage';
-import { drawColorPickerWheel } from './color-picker';
-import { PaletteTest } from './palette';
 import { BlitsyDrawEditor } from './editor';
 
-let drawingStore = localForage.createInstance({
-    name: "blitsy-textures",
-    description: "Assortment of blitsy-encoded textures for use in other compatible applications",
-});
 
 let colors = randomPalette();
 const brushes = brushData.map(data => imageToSprite(decodeAsciiTexture(data, 'X').canvas));
@@ -43,9 +36,6 @@ async function start()
         editor.addContext(image);
     });
 
-    const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
-    //downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
-    const downloadImageButton = document.getElementById("download-image") as HTMLButtonElement;
     //downloadImageButton.addEventListener("click", () => downloadCanvasAsImage(app.drawingContext.canvas));
     
     const uploadTextureInput = document.getElementById("upload-blitsy-texture-input") as HTMLInputElement;
@@ -55,8 +45,6 @@ async function start()
         const reader = new FileReader();
         reader.onload = () => {
             const json = reader.result as string;
-            const data = JSON.parse(json);
-            const texture = decodeTexture(data);
             //app.drawingContext.drawImage(texture.canvas, 0, 0);
         };
         reader.readAsText(uploadTextureInput.files![0]);
@@ -140,7 +128,6 @@ async function start()
     })
     editPaletteColorInput.addEventListener("input", () => {
         const htmlColor = editPaletteColorInput.value;
-        const prevColor = colors[selectedPaletteIndex];
         const nextColor = hexToColor(editPaletteColorInput.value.slice(1));
         //replaceColor(app.drawingContext, prevColor, nextColor);
         colors[selectedPaletteIndex] = nextColor;
