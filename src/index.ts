@@ -21,210 +21,6 @@ document.addEventListener("keyup", event => HELD_KEYS.delete(event.key));
 
 type ToolType = "move" | "draw" | "line" | "fill";
 
-function guessPivot(sprite: Sprite): [number, number] {
-    return [sprite.rect.w / 2, sprite.rect.h / 2];
-}
-
-function pivotPointer(sprite: Sprite, pointer: Vector2): [number, number] {
-    const [ox, oy] = guessPivot(sprite);
-    return [Math.round(pointer.x - ox), Math.round(pointer.y - oy)]; 
-}
-
-export class Tool
-{
-    constructor(protected readonly app: BlitsyDraw) { }
-
-    public cursor = "crosshair";
-    public drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void { };
-    public start(pointer: Vector2): void { };
-    public move(pointer: Vector2): void { };
-    public stop(pointer: Vector2): void { };
-}
-
-export class DrawTool extends Tool
-{
-    private lastPos: Vector2 | undefined = undefined;
-
-    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
-    {
-        const brush = this.app.brushColored;
-        const [x, y] = pivotPointer(brush, pointer);
-
-        drawSprite(context, brush, x, y);
-    }
-
-    start(pointer: Vector2): void
-    {
-        const brush = this.app.brushColored;
-        const [x, y] = pivotPointer(brush, pointer);
-        drawSprite(this.app.drawingContext, brush, x, y);
-        this.lastPos = makeVector2(pointer.x, pointer.y);
-    }
-
-    move(pointer: Vector2): void
-    {
-        if (!this.lastPos) return;
-        const brush = this.app.brushColored;
-        const [x0, y0] = pivotPointer(brush, this.lastPos);
-        const [x1, y1] = pivotPointer(brush, pointer);
-        drawLine(this.app.drawingContext, brush, x0, y0, x1, y1);
-        this.lastPos = makeVector2(pointer.x, pointer.y);
-    }
-
-    stop(pointer: Vector2): void
-    {
-        this.lastPos = undefined;
-    }
-}
-
-export class LineTool extends Tool
-{
-    private startPos: Vector2 | undefined = undefined;
-
-    drawCursor(context: CanvasRenderingContext2D, pointer: Vector2): void
-    {
-        const brush = this.app.brushColored;
-        const [px, py] = pivotPointer(brush, pointer);
-
-        if (this.startPos) {
-            const [sx, sy] = pivotPointer(brush, this.startPos);
-            drawLine(context, brush, sx, sy, px, py);
-        } else {
-            drawSprite(context, this.app.brushColored, px, py);
-        }
-    }
-
-    start(pointer: Vector2): void
-    {
-        this.startPos = makeVector2(pointer.x, pointer.y);
-    }
-
-    stop(pointer: Vector2): void
-    {
-        if (!this.startPos) return;
-        const brush = this.app.brushColored;
-        const [x0, y0] = pivotPointer(brush, this.startPos);
-        const [x1, y1] = pivotPointer(brush, pointer);
-        drawLine(this.app.drawingContext, brush, x0, y0, x1, y1);
-        this.startPos = undefined;
-    }
-}
-
-export class FillTool extends Tool 
-{
-    start(pointer: Vector2): void
-    {
-        fillColor(this.app.drawingContext, this.app.activeColor, pointer.x, pointer.y);
-    }
-}
-
-const size = [128, 96];
-
-export class BlitsyDraw
-{
-    private readonly displayCanvas: HTMLCanvasElement;
-    private readonly displayContext: CanvasRenderingContext2D;
-    public readonly drawingContext: CanvasRenderingContext2D;
-
-    public activeTool: ToolType = "draw";
-    public activeBrush: Sprite;
-    public activeColor = 0xFFFFFFFF;
-
-    private readonly cursor: Vector2 = { x: 0, y: 0 };
-    public brushColored: Sprite;
-
-    private tools: {[tool: string]: Tool} = {};
-
-    constructor()
-    {
-        const [width, height] = size;
-        this.displayContext = createContext2D(width, height);
-        this.displayCanvas = this.displayContext.canvas;
-        this.displayCanvas.id = "display";
-        //document.getElementById("root")!.appendChild(this.displayContext.canvas);
-        this.drawingContext = createContext2D(width, height);
-
-        this.activeBrush = brushes[2];
-        this.brushColored = recolor(this.activeBrush, this.activeColor);
-
-        this.tools["move"] = new DrawTool(this);
-        this.tools["draw"] = new DrawTool(this);
-        this.tools["line"] = new LineTool(this);
-        this.tools["fill"] = new FillTool(this);
-    }
-
-    public start(): void
-    {
-        const animate = (time: number) => {
-            this.update(0);
-            this.render();
-            window.requestAnimationFrame(animate);
-        };
-
-        window.requestAnimationFrame(animate);
-
-        window.addEventListener("pointerdown", event => this.onPointerDown(event));
-        window.addEventListener("pointerup", event => this.onPointerUp(event));
-        window.addEventListener("pointermove", event => this.onPointerMove(event));
-    }
-
-    public update(dt: number): void
-    {
-        this.updateBrush();
-        this.render();
-        //drawColorPickerWheel(this.drawingContext);
-    }
-
-    public render(): void
-    {
-        this.displayContext.clearRect(0, 0, this.displayContext.canvas.width, this.displayContext.canvas.height);
-        this.displayContext.drawImage(this.drawingContext.canvas, 0, 0);
-
-        const tool = this.tools[this.activeTool];
-        const [width, height] = size;
-        this.displayCanvas.setAttribute("style", `cursor: ${tool.cursor}; width: ${width * 4}px; height: ${height * 4}px;`);
-        tool.drawCursor(this.displayContext, this.cursor);
-    }
-
-    private onPointerDown(event: PointerEvent): void
-    {
-        this.updateCursorFromEvent(event);
-        this.updateBrush();
-        this.tools[this.activeTool].start(this.cursor);
-    }
-
-    private onPointerUp(event: PointerEvent): void
-    {
-        this.updateCursorFromEvent(event);
-        this.updateBrush();
-        this.tools[this.activeTool].stop(this.cursor);
-    }
-
-    private onPointerMove(event: PointerEvent): void 
-    {
-        this.updateCursorFromEvent(event);
-        this.updateBrush();
-        this.tools[this.activeTool].move(this.cursor);               
-    }
-
-    private updateCursorFromEvent(event: PointerEvent): void
-    {
-        const canvas = this.displayContext.canvas as HTMLCanvasElement;
-        const [sx, sy] = [canvas.width / canvas.scrollWidth, canvas.height / canvas.scrollHeight]
-        this.cursor.x = Math.floor((event.pageX - this.displayCanvas.offsetLeft) * sx);
-        this.cursor.y = Math.floor((event.pageY - this.displayCanvas.offsetTop) * sy);
-    }
-
-    private updateBrush(): void
-    {
-        const erase = this.activeColor === 0;
-
-        const color = erase ? randomColor() : this.activeColor;
-        this.brushColored = recolor(this.activeBrush, color);
-        this.drawingContext.globalCompositeOperation = erase ? "destination-out" : "source-over";
-    }
-}
-
 async function start()
 {
     localForage.keys().then(keys => {
@@ -235,16 +31,6 @@ async function start()
 
     const editor = new BlitsyDrawEditor();
     editor.start();
-
-    const app = new BlitsyDraw();
-    app.start();
-    app.activeColor = colors[1];
-    
-    //const display = document.getElementById("display") as HTMLElement;
-    const [width, height] = size;
-    //display.setAttribute("style", `width: ${width * 4}; height: ${height * 4};`);
-
-    //const test = new PaletteTest(document.getElementsByTagName("body")[0]);
 
     const createImageButton = document.getElementById("create-image-button") as HTMLButtonElement;
     const createWidthInput = document.getElementById("create-width-input") as HTMLInputElement;
@@ -258,9 +44,9 @@ async function start()
     });
 
     const downloadTextureButton = document.getElementById("download-blitsy-texture") as HTMLButtonElement;
-    downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
+    //downloadTextureButton.addEventListener("click", () => downloadCanvasAsTexture(app.drawingContext.canvas));
     const downloadImageButton = document.getElementById("download-image") as HTMLButtonElement;
-    downloadImageButton.addEventListener("click", () => downloadCanvasAsImage(app.drawingContext.canvas));
+    //downloadImageButton.addEventListener("click", () => downloadCanvasAsImage(app.drawingContext.canvas));
     
     const uploadTextureInput = document.getElementById("upload-blitsy-texture-input") as HTMLInputElement;
     const uploadTextureButton = document.getElementById("upload-blitsy-texture-button") as HTMLButtonElement;
@@ -271,7 +57,7 @@ async function start()
             const json = reader.result as string;
             const data = JSON.parse(json);
             const texture = decodeTexture(data);
-            app.drawingContext.drawImage(texture.canvas, 0, 0);
+            //app.drawingContext.drawImage(texture.canvas, 0, 0);
         };
         reader.readAsText(uploadTextureInput.files![0]);
     });
@@ -304,10 +90,9 @@ async function start()
         brushContainer.appendChild(canvas);
         brushButtons.push(canvas);
         canvas.addEventListener("click", () => {
-            if (app.activeTool === "fill") {
+            if (editor.activeTool === "fill") {
                 setTool("draw");
             }
-            app.activeBrush = sprite;
             editor.activeBrush = sprite;
             brushButtons.forEach(button => button.removeAttribute("class"));
             canvas.setAttribute("class", "selected");
@@ -320,7 +105,6 @@ async function start()
     function setTool(tool: ToolType) {
         toolButtons.forEach(button => button.removeAttribute("class"));
         toolButtons.get(tool)!.setAttribute("class", "selected");
-        app.activeTool = tool;
         editor.activeTool = tool;
     }
 
@@ -351,15 +135,14 @@ async function start()
     const editPaletteColorButton = document.getElementById("edit-palette-color-button") as HTMLButtonElement;
     const editPaletteColorInput = document.getElementById("edit-palette-color-input") as HTMLInputElement;
     editPaletteColorButton.addEventListener("click", () => {
-        editPaletteColorInput.value = "#" + colorToHex(app.activeColor);
+        editPaletteColorInput.value = "#" + colorToHex(editor.activeColor);
         editPaletteColorInput.click();
     })
     editPaletteColorInput.addEventListener("input", () => {
         const htmlColor = editPaletteColorInput.value;
         const prevColor = colors[selectedPaletteIndex];
         const nextColor = hexToColor(editPaletteColorInput.value.slice(1));
-        app.activeColor = nextColor;
-        replaceColor(app.drawingContext, prevColor, nextColor);
+        //replaceColor(app.drawingContext, prevColor, nextColor);
         colors[selectedPaletteIndex] = nextColor;
         colorButtons[selectedPaletteIndex].setAttribute("style", `background-color: ${htmlColor}`);
         editor.setPalette(colors);
@@ -375,7 +158,6 @@ async function start()
         colorButtons.push(button);
         colorContainer.appendChild(button);
         button.addEventListener("click", () => {
-            app.activeColor = colors[i];
             editor.activeColor = rgbaToColor({ r: i, g: 0, b: 0, a: 255 });
             selectedPaletteIndex = i;
             colorButtons.forEach(button => button.removeAttribute("class"));
@@ -387,7 +169,6 @@ async function start()
     const randomisePaletteButton = document.getElementById("randomise-palette")!;
     randomisePaletteButton.addEventListener("click", () => {
         const colors2 = randomPalette();
-        remapColors(app.drawingContext, colors, colors2);
         colors = colors2;
         editor.setPalette(colors);
         colorButtons.forEach((button, i) => {

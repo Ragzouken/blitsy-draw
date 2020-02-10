@@ -23,10 +23,15 @@
                     <li>click and drag on a drawing to draw on it</li>
                 </ol>
             </div>
-            <div class="section">
-                <h1>drawing board</h1>
+            <div class="line-tabs">
+                <button id="drawing-create-tab" title="Switch to create mode, in which you can add new drawings.">create</button>
+                <button id="drawing-arrange-tab" title="Switch to arrange mode, in which you can select drawings and drag them around">arrange</button>
+                <button id="drawing-draw-tab" title="Switch to draw mode, in which you can edit drawings">draw</button>
+            </div>
+            <div class="section" id="drawing-create-section">
+                <h1>add drawings</h1>
                 
-                <h2>create drawing</h2>
+                <h2>add blank drawing</h2>
                 <div id="create">
                     <input id="create-width-input" class="pixel-size" type="number">
                     x
@@ -48,10 +53,6 @@
                     <input hidden type="file" id="upload-image-input">
                     <button id="upload-image-button">load image</button>
                 </div>
-            </div>
-            <div class="line-tabs">
-                <button id="drawing-select-button" title="Switch to select mode, in which you can select drawings and drag them around">select & move</button>
-                <button id="drawing-draw-button" title="Switch to draw mode, in which you can edit drawings">draw</button>
             </div>
             <div class="section" id="selected-drawing-section">
                 <h1>selected drawing</h1>
